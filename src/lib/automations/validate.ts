@@ -132,6 +132,13 @@ function validateOne(step: StepLike, path: string, issues: ValidationIssue[]): v
         issues.push({ path: `${path}.url`, message: 'webhook URL is not a valid URL' })
       }
       break
+    case 'ai_reply':
+      // All config is optional — the step falls back to a default
+      // persona and simply skips sending when nothing is configured.
+      if (typeof c.top_k === 'number' && (!Number.isFinite(c.top_k) || c.top_k < 1)) {
+        issues.push({ path: `${path}.top_k`, message: 'top_k must be 1 or greater' })
+      }
+      break
     case 'close_conversation':
       // No config required.
       break
