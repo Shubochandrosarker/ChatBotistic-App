@@ -3,6 +3,7 @@ import type {
   AutomationLogStepResult,
   AutomationStep,
   AutomationTriggerType,
+  AiReplyStepConfig,
   ConditionStepConfig,
   KeywordMatchTriggerConfig,
   SendMessageStepConfig,
@@ -16,6 +17,7 @@ import type {
 } from '@/types'
 import { supabaseAdmin } from './admin-client'
 import { engineSendText, engineSendTemplate } from './meta-send'
+import { generateRagAnswer } from '@/lib/ai/rag'
 
 // ------------------------------------------------------------
 // Public API
@@ -345,6 +347,41 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
         params,
       })
       return `template sent via Meta (${whatsapp_message_id})`
+    }
+
+    case 'ai_reply': {
+      const cfg = step.step_config as AiReplyStepConfig
+      if (!args.contactId) throw new Error('ai_reply needs a contact')
+      const question = (args.context.message_text ?? '').toString().trim()
+      if (!question) throw new Error('ai_reply has no inbound message to answer')
+      const conversationId = await resolveConversationId(args)
+
+      const { answer, sources, noContext } = await generateRagAnswer({
+        userId: args.automation.user_id,
+        question,
+        systemPrompt: cfg.system_prompt,
+        topK: cfg.top_k,
+      })
+
+      const reply = answer ?? (cfg.fallback_message ?? '').trim()
+      if (!reply) {
+        // No knowledge-base answer and no fallback configured — skip
+        // sending rather than blasting an empty message.
+        return noContext
+          ? 'no knowledge-base match; no fallback configured — skipped'
+          : 'AI produced no reply — skipped'
+      }
+
+      const { whatsapp_message_id } = await engineSendText({
+        userId: args.automation.user_id,
+        conversationId,
+        contactId: args.contactId,
+        text: reply,
+      })
+      const detail = answer
+        ? `AI reply sent via Meta (${whatsapp_message_id}); ${sources.length} source(s)`
+        : `fallback sent via Meta (${whatsapp_message_id}); no knowledge-base match`
+      return detail
     }
 
     case 'add_tag': {

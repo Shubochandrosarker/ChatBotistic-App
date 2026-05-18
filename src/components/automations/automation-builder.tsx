@@ -11,6 +11,7 @@ import {
   GripVertical,
   MessageSquare,
   FileText,
+  Sparkles,
   Tag,
   TagIcon,
   UserCheck,
@@ -79,6 +80,7 @@ interface StepMeta {
 const STEP_META: Record<AutomationStepType, StepMeta> = {
   send_message: { label: "Send Message", icon: MessageSquare, border: "border-l-violet-500" },
   send_template: { label: "Send Template", icon: FileText, border: "border-l-violet-500" },
+  ai_reply: { label: "AI Reply (RAG)", icon: Sparkles, border: "border-l-emerald-500" },
   add_tag: { label: "Add Tag", icon: Tag, border: "border-l-violet-500" },
   remove_tag: { label: "Remove Tag", icon: TagIcon, border: "border-l-violet-500" },
   assign_conversation: { label: "Assign Conversation", icon: UserCheck, border: "border-l-violet-500" },
@@ -93,6 +95,7 @@ const STEP_META: Record<AutomationStepType, StepMeta> = {
 const ADDABLE_STEPS: AutomationStepType[] = [
   "send_message",
   "send_template",
+  "ai_reply",
   "add_tag",
   "remove_tag",
   "assign_conversation",
@@ -133,6 +136,8 @@ function blankConfig(type: AutomationStepType): Record<string, unknown> {
       return { text: "" }
     case "send_template":
       return { template_name: "", language: "en_US" }
+    case "ai_reply":
+      return { system_prompt: "", fallback_message: "", top_k: 5 }
     case "add_tag":
     case "remove_tag":
       return { tag_id: "" }
@@ -741,6 +746,43 @@ function StepEditor({
           </FieldBlock>
         </>
       )
+    case "ai_reply":
+      return (
+        <>
+          <p className="mb-2 text-xs text-slate-400">
+            Answers the incoming message using your{" "}
+            <a href="/knowledge-base" className="text-emerald-400 hover:underline">
+              knowledge base
+            </a>{" "}
+            (RAG via Cloudflare Workers AI), then sends the reply on WhatsApp®.
+          </p>
+          <FieldBlock label="System prompt (optional)">
+            <Textarea
+              value={(cfg.system_prompt as string) ?? ""}
+              onChange={(e) => set({ system_prompt: e.target.value })}
+              placeholder="Leave blank to use the default support-assistant persona."
+              className="min-h-20 bg-slate-800 text-white"
+            />
+          </FieldBlock>
+          <FieldBlock label="Fallback message (optional)">
+            <Textarea
+              value={(cfg.fallback_message as string) ?? ""}
+              onChange={(e) => set({ fallback_message: e.target.value })}
+              placeholder="Sent when the knowledge base has no answer. Blank = stay silent."
+              className="min-h-16 bg-slate-800 text-white"
+            />
+          </FieldBlock>
+          <FieldBlock label="Knowledge-base chunks to retrieve">
+            <Input
+              type="number"
+              min={1}
+              value={(cfg.top_k as number) ?? 5}
+              onChange={(e) => set({ top_k: Math.max(1, Number(e.target.value)) })}
+              className="bg-slate-800 text-white"
+            />
+          </FieldBlock>
+        </>
+      )
     case "add_tag":
     case "remove_tag":
       return (
@@ -951,6 +993,8 @@ function previewFor(step: BuilderStep): string {
       return (step.step_config.text as string) || "no text yet"
     case "send_template":
       return (step.step_config.template_name as string) || "pick a template"
+    case "ai_reply":
+      return "answers from your knowledge base"
     case "wait":
       return `${step.step_config.amount ?? "?"} ${step.step_config.unit ?? ""}`
     case "condition":

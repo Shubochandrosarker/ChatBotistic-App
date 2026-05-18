@@ -269,6 +269,7 @@ export type AutomationTriggerType =
 export type AutomationStepType =
   | 'send_message'
   | 'send_template'
+  | 'ai_reply'
   | 'add_tag'
   | 'remove_tag'
   | 'assign_conversation'
@@ -360,9 +361,19 @@ export interface SendWebhookStepConfig {
   body_template?: string;
 }
 
+export interface AiReplyStepConfig {
+  /** Overrides the default support-assistant persona/instructions. */
+  system_prompt?: string;
+  /** Sent when the knowledge base has no answer for the question. */
+  fallback_message?: string;
+  /** Number of knowledge-base chunks to retrieve (default 5). */
+  top_k?: number;
+}
+
 export type AutomationStepConfig =
   | SendMessageStepConfig
   | SendTemplateStepConfig
+  | AiReplyStepConfig
   | TagStepConfig
   | AssignConversationStepConfig
   | UpdateContactFieldStepConfig
