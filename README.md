@@ -1,100 +1,85 @@
-# wacrm — CRM Template for WhatsApp
+# WPistic WhatsApp CRM
 
-> Self-hostable CRM template for WhatsApp® — shared inbox, contacts,
-> sales pipelines, broadcasts, and no-code automations. Fork it, brand
-> it, host it.
+> Multi-tenant WhatsApp CRM SaaS — shared inbox, contacts, sales
+> pipelines, broadcasts, and no-code automations. Dual-provider
+> messaging (Meta Cloud API + Twilio), org-scoped tenancy, and
+> Memberistic/Licenseistic SSO gating.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-violet.svg)](./LICENSE)
-[![CI](https://github.com/ArnasDon/wacrm/actions/workflows/ci.yml/badge.svg)](https://github.com/ArnasDon/wacrm/actions/workflows/ci.yml)
+[![CI](https://github.com/shubochandrosarker/WPistic-WhatsApp-CRM/actions/workflows/ci.yml/badge.svg)](https://github.com/shubochandrosarker/WPistic-WhatsApp-CRM/actions/workflows/ci.yml)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs)](https://nextjs.org)
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20Auth-3ecf8e?logo=supabase)](https://supabase.com)
-[![Stars](https://img.shields.io/github/stars/ArnasDon/wacrm?style=social)](https://github.com/ArnasDon/wacrm/stargazers)
 
-The marketing site and self-host docs live in a separate repo:
-[ArnasDon/wacrm-site](https://github.com/ArnasDon/wacrm-site)
-([wacrm.tech](https://wacrm.tech)). This repo is the product —
-clone or fork it to run your own CRM.
+WPistic WhatsApp CRM derives from the open-source
+[wacrm](https://github.com/ArnasDon/wacrm) template (MIT) and extends
+it into a commercial multi-tenant SaaS.
 
-## What you get out of the box
+## What you get
 
-- **Shared inbox** on the official WhatsApp Business API — multiple
-  agents working one number, per-conversation assignment, status, and
-  notes.
+- **Shared inbox** — multiple agents working one WhatsApp number,
+  per-conversation assignment, status, and notes.
+- **Dual-provider messaging** — every org chooses **Meta Cloud API**
+  (official WhatsApp Business API) or **Twilio** as its WhatsApp
+  provider. The CRM speaks a single internal interface; the provider
+  is swappable per org.
 - **Contacts + tags + custom fields**, CSV import, deduplication.
 - **Sales pipelines** (Kanban) with deals linked to conversations.
-- **Broadcasts** with Meta-approved templates, delivery + read
-  tracking, per-recipient variable substitution.
+- **Broadcasts** with approved templates, delivery + read tracking,
+  per-recipient variable substitution.
 - **No-code automations** — triggers on inbound messages, new
-  contacts, keywords, or schedule; conditional branches, waits,
-  tags, webhooks. Visual builder.
+  contacts, keywords, or schedule; conditional branches, waits, tags,
+  webhooks. Visual builder.
 - **Real-time dashboard** — response times, daily volume, pipeline
   value, cross-module activity feed.
-- **Account management** — email, password, avatar, global sign-out.
 
-## Why fork this?
+## Multi-tenancy
 
-This is a **template**, not a product. Forking means you get:
+Every row in the database is scoped to an `org_id`. Users belong to
+one or more organizations through the `org_members` table, and Row
+Level Security enforces that members only ever see their own org's
+data. See `supabase/migrations/009_org_tenancy.sql`.
 
-- **Full ownership** — your code, your Supabase project, your domain,
-  your data. No SaaS lock-in, no seat pricing, no trust dance.
-- **Full customisation** — add the fields your team needs, remove the
-  modules you don't, redesign anything. The stack is boring on
-  purpose (Next.js + Supabase + Tailwind) so the learning curve is
-  short.
-- **Zero ops to start** — Hostinger Managed Node.js deploys a fork in
-  a few clicks. No Docker, no Kubernetes, no infra team needed.
-- **Real security primitives** — token encryption (AES-256-GCM), RLS
-  on every table, HMAC-verified webhooks, CSP, rate limiting, CI
-  typecheck/build on every PR.
+## SSO bridge (Memberistic + Licenseistic)
 
-Not a framework. Not an SDK. A concrete, working CRM you can stand up
-in an afternoon and make yours.
+Access to the CRM is gated by two WordPress plugins:
 
-## Quick start
+- **Memberistic** — owns memberships and plans.
+- **Licenseistic** — owns the license key, allowed domains, and
+  widget/agent/domain limits.
 
-```bash
-# Fork on GitHub first: https://github.com/ArnasDon/wacrm → Fork
-git clone https://github.com/<your-username>/wacrm.git
-cd wacrm
-npm install
-cp .env.local.example .env.local   # fill in Supabase + Meta creds
-npm run dev
-```
-
-Open <http://localhost:3000>. You'll be redirected to `/login` (or
-`/dashboard` if already signed in).
-
-## Documentation
-
-Full self-host documentation — Supabase migrations, WhatsApp Business
-API config, and production deploy — lives at
-**[wacrm.tech/docs](https://wacrm.tech/docs)**
-(source: [ArnasDon/wacrm-site](https://github.com/ArnasDon/wacrm-site)).
-
-Key pages:
-- [Getting started](https://wacrm.tech/docs/getting-started)
-- [Supabase setup](https://wacrm.tech/docs/supabase-setup)
-- [WhatsApp setup](https://wacrm.tech/docs/whatsapp-setup)
-- [Environment variables](https://wacrm.tech/docs/environment-variables)
-- [Deploy on Hostinger](https://wacrm.tech/docs/deployment-hostinger)
-- [Architecture](https://wacrm.tech/docs/architecture)
-- [Troubleshooting](https://wacrm.tech/docs/troubleshooting)
+On the WordPress side the plugins mint a signed SSO token. WPistic CRM
+verifies it (`src/lib/sso/`), provisions or maps the org, and stores
+the asserted entitlements (agent cap, widget cap, allowed domains) on
+the org record. The `/api/sso/login` route is the entry point.
 
 ## Stack
 
 - **App** — Next.js 16 (App Router), React 19, TypeScript, Tailwind v4.
 - **Data** — Supabase (Postgres + Auth + Storage + RLS).
-- **WhatsApp** — Meta Cloud API (official WhatsApp Business API).
+- **WhatsApp** — Meta Cloud API and/or Twilio, selectable per org.
 
-## Contributing
+## Quick start
 
-This is a template, not a collaborative product — the expected flow is
-fork → customise → deploy, **not** upstream contribution. Bug reports
-and security issues are welcome; feature PRs often belong in your fork
-rather than here. Details in
-[`CONTRIBUTING.md`](./CONTRIBUTING.md) and
-[`.github/SECURITY.md`](./.github/SECURITY.md).
+```bash
+git clone https://github.com/shubochandrosarker/WPistic-WhatsApp-CRM.git
+cd WPistic-WhatsApp-CRM
+npm install
+cp .env.local.example .env.local   # fill in Supabase + provider creds
+npm run dev
+```
+
+Open <http://localhost:3000>.
+
+## Dev loop
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Dev server on port 3000. |
+| `npm run build` | Production build (Next runs typecheck). |
+| `npm run typecheck` | `tsc --noEmit`. |
+| `npm run lint` | ESLint. |
+| `npm run format` | Prettier write. |
 
 ## License
 
-[MIT](./LICENSE). Fork it, brand it, host it.
+See [`LICENSE`](./LICENSE). This project derives from the MIT-licensed
+wacrm template; the original copyright notice is retained.
