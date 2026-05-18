@@ -23,7 +23,10 @@ export interface ChatbotisticLead {
   phone: string | null
   message: string | null
   source: string | null
+  country: string | null
   createdAt: string | null
+  /** Every captured form field, as label/value pairs. */
+  fields: { label: string; value: string }[]
   /** The untouched original record, for fields we don't map explicitly. */
   raw: Record<string, unknown>
 }
@@ -77,20 +80,77 @@ function pick(record: Record<string, unknown>, keys: string[]): string | null {
   return null
 }
 
+// The tochat.be / Chatbotistic platform stores captured form fields as
+// an array of label/value pairs (the `data` / `dataProperties` field of
+// a Stats record) rather than as named columns. Flatten it so we can
+// match fields by label regardless of how the form was configured.
+function extractFields(
+  record: Record<string, unknown>,
+): { label: string; value: string }[] {
+  const out: { label: string; value: string }[] = []
+  for (const key of ['data', 'dataProperties', 'fields', 'formData']) {
+    const arr = record[key]
+    if (!Array.isArray(arr)) continue
+    for (const entry of arr) {
+      if (!entry || typeof entry !== 'object') continue
+      const e = entry as Record<string, unknown>
+      const label = e.label ?? e.name ?? e.key ?? e.title
+      const value = e.val ?? e.value ?? e.text ?? e.answer
+      if (label != null && value != null && String(value) !== '') {
+        out.push({ label: String(label), value: String(value) })
+      }
+    }
+  }
+  return out
+}
+
+// Match a captured field by a set of label keywords (English + Spanish,
+// since tochat.be forms are frequently localised).
+function fieldByLabel(
+  fields: { label: string; value: string }[],
+  keywords: string[],
+): string | null {
+  for (const kw of keywords) {
+    const hit = fields.find((f) => f.label.toLowerCase().includes(kw))
+    if (hit) return hit.value
+  }
+  return null
+}
+
 function normaliseLead(
   record: Record<string, unknown>,
   index: number,
 ): ChatbotisticLead {
+  const fields = extractFields(record)
+
   return {
     id:
       pick(record, ['id', '_id', 'leadId', 'lead_id', 'uuid']) ??
       `lead-${index}`,
-    name: pick(record, ['name', 'fullName', 'full_name', 'firstName', 'contactName']),
-    email: pick(record, ['email', 'emailAddress', 'email_address']),
-    phone: pick(record, ['phone', 'phoneNumber', 'phone_number', 'mobile', 'whatsapp']),
-    message: pick(record, ['message', 'text', 'note', 'notes', 'enquiry', 'comment']),
-    source: pick(record, ['source', 'channel', 'chatbot', 'botName', 'origin']),
-    createdAt: pick(record, ['createdAt', 'created_at', 'date', 'timestamp', 'time']),
+    name:
+      pick(record, ['name', 'fullName', 'full_name', 'firstName', 'contactName']) ??
+      fieldByLabel(fields, ['name', 'nombre', 'nom']),
+    email:
+      pick(record, ['email', 'emailAddress', 'email_address']) ??
+      fieldByLabel(fields, ['email', 'correo', 'mail']),
+    phone:
+      pick(record, ['phone', 'phoneNumber', 'phone_number', 'mobile', 'whatsapp']) ??
+      fieldByLabel(fields, ['phone', 'tel', 'teléfono', 'telefono', 'whatsapp', 'móvil', 'movil']),
+    message:
+      pick(record, ['message', 'text', 'note', 'notes', 'enquiry', 'comment']) ??
+      fieldByLabel(fields, ['message', 'mensaje', 'comment', 'comentario', 'enquiry']),
+    source:
+      pick(record, ['source', 'channel', 'chatbot', 'botName', 'origin', 'referer']),
+    country: pick(record, ['country', 'pais', 'país']),
+    createdAt: pick(record, [
+      'createdAt',
+      'created_at',
+      'created',
+      'date',
+      'timestamp',
+      'time',
+    ]),
+    fields,
     raw: record,
   }
 }
