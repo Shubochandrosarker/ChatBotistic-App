@@ -22,7 +22,7 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#7c3aed", // violet-600 (WPistic brand purple)
+          background: "#7c3aed", // primary (WPistic brand purple)
           borderRadius: 6,
         }}
       >

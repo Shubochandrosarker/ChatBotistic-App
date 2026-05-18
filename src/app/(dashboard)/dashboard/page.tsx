@@ -117,12 +117,16 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-        <p className="mt-1 text-sm text-slate-400">
-          Live analytics across conversations, contacts, deals, broadcasts, and automations.
-        </p>
+      {/* Hero header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary/70 p-6 text-primary-foreground shadow-sm">
+        <div className="absolute -right-8 -top-10 h-40 w-40 rounded-full bg-white/10" />
+        <div className="absolute -bottom-14 right-20 h-32 w-32 rounded-full bg-white/[0.07]" />
+        <div className="relative">
+          <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
+          <p className="mt-1 max-w-xl text-sm text-primary-foreground/80">
+            Live analytics across conversations, contacts, deals, broadcasts, and automations.
+          </p>
+        </div>
       </div>
 
       {/* Metric cards */}
@@ -135,6 +139,7 @@ export default function DashboardPage() {
               title="Active Conversations"
               value={metrics.activeConversations.current.toLocaleString()}
               icon={MessageSquare}
+              accent="violet"
               delta={{
                 sign: metrics.activeConversations.previous,
                 label: deltaLabel(metrics.activeConversations.previous, 'new today vs yesterday'),
@@ -144,6 +149,7 @@ export default function DashboardPage() {
               title="New Contacts Today"
               value={metrics.newContactsToday.current.toLocaleString()}
               icon={UserPlus}
+              accent="blue"
               delta={{
                 sign:
                   metrics.newContactsToday.current - metrics.newContactsToday.previous,
@@ -157,12 +163,14 @@ export default function DashboardPage() {
               title="Open Deals Value"
               value={formatCurrency(metrics.openDealsValue)}
               icon={DollarSign}
+              accent="emerald"
               subtitle={`${metrics.openDealsCount} open deal${metrics.openDealsCount === 1 ? '' : 's'}`}
             />
             <MetricCard
               title="Messages Sent Today"
               value={metrics.messagesSentToday.current.toLocaleString()}
               icon={Send}
+              accent="amber"
               delta={{
                 sign:
                   metrics.messagesSentToday.current - metrics.messagesSentToday.previous,

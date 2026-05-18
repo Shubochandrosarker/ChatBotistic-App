@@ -96,8 +96,8 @@ export default function KnowledgeBasePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Knowledge Base</h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <h1 className="text-2xl font-bold text-foreground">Knowledge Base</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Content the AI Reply step uses to answer customers. Add FAQs,
             product info, or policies — the chatbot retrieves the most
             relevant pieces for each question.
@@ -128,12 +128,12 @@ export default function KnowledgeBasePage() {
       )}
 
       {documents.length === 0 ? (
-        <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-slate-800 bg-slate-900/40">
+        <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/40">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
             <BookOpen className="h-6 w-6 text-emerald-500" />
           </div>
-          <p className="mt-3 text-sm font-medium text-white">No documents yet</p>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-3 text-sm font-medium text-foreground">No documents yet</p>
+          <p className="mt-1 text-xs text-muted-foreground">
             Add your first document so the AI chatbot has something to answer from.
           </p>
         </div>
@@ -142,16 +142,16 @@ export default function KnowledgeBasePage() {
           {documents.map((doc) => (
             <li
               key={doc.document_id}
-              className="flex items-center gap-4 rounded-xl border border-slate-800 bg-slate-900 p-4"
+              className="flex items-center gap-4 rounded-xl border border-border bg-card p-4"
             >
               <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">
                 <FileText className="h-5 w-5 text-emerald-400" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold text-white">
+                <div className="truncate text-sm font-semibold text-foreground">
                   {doc.title}
                 </div>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <span className="tabular-nums">
                     {doc.chunk_count} chunk{doc.chunk_count === 1 ? "" : "s"}
                   </span>
@@ -169,7 +169,7 @@ export default function KnowledgeBasePage() {
                 aria-label="Delete document"
                 onClick={() => setPendingDelete(doc)}
               >
-                <Trash2 className="h-4 w-4 text-slate-400" />
+                <Trash2 className="h-4 w-4 text-muted-foreground" />
               </Button>
             </li>
           ))}
@@ -191,7 +191,7 @@ export default function KnowledgeBasePage() {
             <DialogTitle>Remove document</DialogTitle>
             <DialogDescription>
               This permanently removes{" "}
-              <span className="text-white">{pendingDelete?.title}</span> and all
+              <span className="text-foreground">{pendingDelete?.title}</span> and all
               of its chunks from the knowledge base.
             </DialogDescription>
           </DialogHeader>
@@ -283,36 +283,36 @@ function AddDocumentDialog({
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-400">
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">
               Title
             </label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Shipping & returns policy"
-              className="bg-slate-800 text-white"
+              className="bg-muted text-foreground"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-400">
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">
               Source (optional)
             </label>
             <Input
               value={source}
               onChange={(e) => setSource(e.target.value)}
               placeholder="https://example.com/faq"
-              className="bg-slate-800 text-white"
+              className="bg-muted text-foreground"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-400">
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">
               Content
             </label>
             <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Paste the document text here…"
-              className="min-h-48 bg-slate-800 text-white"
+              className="min-h-48 bg-muted text-foreground"
             />
           </div>
         </div>
