@@ -74,10 +74,19 @@ Open <http://localhost:3000>.
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Dev server on port 3000. |
-| `npm run build` | Production build (Next runs typecheck). |
+| `npm run build` | Production build + standalone asset copy. |
+| `npm run start:standalone` | Run the standalone production server locally. |
 | `npm run typecheck` | `tsc --noEmit`. |
 | `npm run lint` | ESLint. |
 | `npm run format` | Prettier write. |
+
+## Deployment
+
+The app builds to a self-contained Next.js **standalone** server
+(`output: "standalone"`), so `npm run build` produces a ready-to-run
+`.next/standalone/` directory. This deploys directly to Hostinger's
+hPanel Node.js app feature — see [`DEPLOY.md`](./DEPLOY.md) for the
+step-by-step guide. The same build runs under PM2 on a VPS.
 
 ## License
 

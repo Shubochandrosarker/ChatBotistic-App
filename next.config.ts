@@ -55,6 +55,23 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   /**
+   * Standalone output for Hostinger deployment.
+   *
+   * Hostinger's hPanel "Node.js app" runs a single startup file under
+   * Passenger — it has no `next` CLI and no full `node_modules`. The
+   * standalone build traces only the files each route actually needs
+   * and emits a self-contained `.next/standalone/server.js`, which is
+   * exactly the entry point hPanel expects.
+   *
+   * `server.js` deliberately omits `public/` and `.next/static/`
+   * (Next assumes a CDN serves them). hPanel's Node app has no CDN in
+   * front of it, so `scripts/copy-standalone-assets.mjs` copies both
+   * into `.next/standalone/` after every build — wired into the
+   * `build` npm script. See DEPLOY.md.
+   */
+  output: "standalone",
+
+  /**
    * Cache-Control policy.
    *
    * Why this exists:
