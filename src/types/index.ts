@@ -92,15 +92,60 @@ export interface Message {
   created_at: string;
 }
 
+export type WhatsAppProviderName = 'meta' | 'twilio';
+
 export interface WhatsAppConfig {
   id: string;
   user_id: string;
-  phone_number_id: string;
+  org_id?: string;
+  /** Which messaging backend this config drives. Defaults to 'meta'. */
+  provider: WhatsAppProviderName;
+  // Meta Cloud API fields — nullable when provider is 'twilio'.
+  phone_number_id?: string;
   waba_id?: string;
-  access_token: string;
+  access_token?: string;
   verify_token?: string;
+  // Twilio fields — nullable when provider is 'meta'.
+  twilio_account_sid?: string;
+  twilio_auth_token?: string;
+  twilio_whatsapp_number?: string;
+  twilio_messaging_service_sid?: string;
   status: 'connected' | 'disconnected';
   connected_at?: string;
+}
+
+// ============================================================
+// Multi-tenancy (migration 009)
+// ============================================================
+
+export type OrgMemberRole = 'owner' | 'admin' | 'agent';
+export type LicenseStatus = 'active' | 'inactive' | 'expired' | 'suspended';
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug?: string;
+  /** Stable WordPress identifier the SSO bridge keys on. */
+  sso_subject?: string;
+  plan: string;
+  license_key?: string;
+  license_status: LicenseStatus;
+  agent_limit: number;
+  widget_limit: number;
+  domain_limit: number;
+  allowed_domains: string[];
+  entitlements_synced_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrgMember {
+  id: string;
+  org_id: string;
+  user_id: string;
+  role: OrgMemberRole;
+  is_primary: boolean;
+  created_at: string;
 }
 
 export interface MessageTemplate {

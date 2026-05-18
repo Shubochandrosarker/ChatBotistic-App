@@ -1,28 +1,29 @@
 {
-  "name": "wacrm",
+  "name": "wpistic-whatsapp-crm",
   "version": "0.1.0",
   "private": true,
-  "description": "Self-hostable CRM template for WhatsApp built on Next.js and Supabase — shared inbox, contacts, sales pipelines, broadcasts, and no-code automations.",
-  "license": "MIT",
-  "author": "Arnas Donauskas",
-  "homepage": "https://github.com/ArnasDon/wacrm",
+  "description": "WPistic WhatsApp CRM — multi-tenant WhatsApp CRM SaaS built on Next.js and Supabase, with dual-provider messaging (Meta Cloud API + Twilio), org-scoped tenancy, and Memberistic/Licenseistic SSO gating.",
+  "license": "SEE LICENSE IN LICENSE",
+  "author": "WPistic",
+  "homepage": "https://github.com/shubochandrosarker/WPistic-WhatsApp-CRM",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ArnasDon/wacrm.git"
+    "url": "git+https://github.com/shubochandrosarker/WPistic-WhatsApp-CRM.git"
   },
   "bugs": {
-    "url": "https://github.com/ArnasDon/wacrm/issues"
+    "url": "https://github.com/shubochandrosarker/WPistic-WhatsApp-CRM/issues"
   },
   "keywords": [
     "crm",
     "whatsapp",
     "whatsapp-business-api",
+    "twilio",
     "nextjs",
     "supabase",
     "automation",
     "broadcast",
-    "self-hosted",
-    "template"
+    "multi-tenant",
+    "saas"
   ],
   "engines": {
     "node": ">=20.0.0"

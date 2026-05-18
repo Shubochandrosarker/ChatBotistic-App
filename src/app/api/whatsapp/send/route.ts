@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { sendTextMessage, sendTemplateMessage } from '@/lib/whatsapp/meta-api'
-import { decrypt, encrypt, isLegacyFormat } from '@/lib/whatsapp/encryption'
+import { providerFromConfigRow } from '@/lib/whatsapp/load-provider'
+import { encrypt, decrypt, isLegacyFormat } from '@/lib/whatsapp/encryption'
 import {
   sanitizePhoneForMeta,
   isValidE164,
@@ -114,17 +114,31 @@ export async function POST(request: Request) {
       )
     }
 
-    const accessToken = decrypt(config.access_token)
+    // Resolve the org's WhatsApp provider (Meta or Twilio) from the
+    // stored config. Decryption of the at-rest secrets happens here.
+    let provider
+    try {
+      provider = providerFromConfigRow(config)
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Invalid WhatsApp configuration'
+      console.error('[whatsapp/send] provider resolution failed:', message)
+      return NextResponse.json({ error: message }, { status: 400 })
+    }
 
-    // Self-heal legacy CBC-encrypted tokens. Fire-and-forget: we
-    // return from the send without waiting, so a failed upgrade just
-    // means the next send tries again. The upgrade is idempotent —
-    // concurrent sends both produce valid GCM ciphertexts of the same
-    // plaintext, last write wins.
-    if (isLegacyFormat(config.access_token)) {
+    // Self-heal legacy CBC-encrypted Meta tokens. Fire-and-forget: a
+    // failed upgrade just means the next send tries again. Idempotent —
+    // concurrent sends produce valid GCM ciphertexts of the same
+    // plaintext, last write wins. Only Meta stores access_token.
+    if (
+      (config.provider ?? 'meta') === 'meta' &&
+      config.access_token &&
+      isLegacyFormat(config.access_token)
+    ) {
+      const upgraded = encrypt(decrypt(config.access_token))
       void supabase
         .from('whatsapp_config')
-        .update({ access_token: encrypt(accessToken) })
+        .update({ access_token: upgraded })
         .eq('id', config.id)
         .then(({ error }) => {
           if (error) {
@@ -136,28 +150,24 @@ export async function POST(request: Request) {
         })
     }
 
-    // Send via Meta API — retry with phone-number variants if Meta rejects
-    // with "recipient not in allowed list" (common in sandbox / when a
-    // number was registered with/without a trunk 0). If an alternate
-    // format succeeds, we persist it back to the contact row so the
-    // next send goes through on the first attempt.
+    // Send via the resolved provider — retry with phone-number variants
+    // if the provider rejects with "recipient not in allowed list"
+    // (common in sandbox / when a number was registered with/without a
+    // trunk 0). If an alternate format succeeds, we persist it back to
+    // the contact row so the next send goes through on the first try.
     let waMessageId = ''
     let workingPhone = sanitizedPhone
 
     const attempt = async (phone: string): Promise<string> => {
       if (message_type === 'template') {
-        const result = await sendTemplateMessage({
-          phoneNumberId: config.phone_number_id,
-          accessToken,
+        const result = await provider.sendTemplate({
           to: phone,
           templateName: template_name,
           params: template_params || [],
         })
         return result.messageId
       }
-      const result = await sendTextMessage({
-        phoneNumberId: config.phone_number_id,
-        accessToken,
+      const result = await provider.sendText({
         to: phone,
         text: content_text,
       })
@@ -189,10 +199,14 @@ export async function POST(request: Request) {
 
       if (lastError) throw lastError
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown Meta API error'
-      console.error('Meta API send failed for all variants:', message)
+      const message =
+        err instanceof Error ? err.message : 'Unknown WhatsApp provider error'
+      console.error(
+        `[whatsapp/send] ${provider.name} send failed for all variants:`,
+        message,
+      )
       return NextResponse.json(
-        { error: `Meta API error: ${message}` },
+        { error: `WhatsApp provider error: ${message}` },
         { status: 502 }
       )
     }

@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-// Replaces the default Next.js favicon with the brand mark — Hostinger
+// Replaces the default Next.js favicon with the brand mark — WPistic
 // violet rounded square + white chat-square glyph — matching the
 // sidebar logo in `src/components/layout/sidebar.tsx`. Next.js renders
 // this at build time and auto-injects <link rel="icon"> into <head>.
@@ -22,7 +22,7 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#7c3aed", // violet-600 (Hostinger-aligned purple)
+          background: "#7c3aed", // violet-600 (WPistic brand purple)
           borderRadius: 6,
         }}
       >
