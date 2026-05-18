@@ -18,7 +18,7 @@ import crypto from 'node:crypto'
  *                    Maps 1:1 to organizations.sso_subject.
  *   - email, name    provisioning details for the CRM user.
  *   - Memberistic asserts: plan, agent_limit, widget_limit,
- *     domain_limit, conversation_limit, white_label (from the plan's
+ *     domain_limit, contact_limit, white_label (from the plan's
  *     settings JSON — see the SaaS connector plugin module).
  *   - Licenseistic asserts: license_key, license_status,
  *     allowed_domains.
@@ -35,9 +35,9 @@ export interface SsoClaims {
   agent_limit?: number
   widget_limit?: number
   domain_limit?: number
-  /** Monthly conversation cap. 0 means unlimited. */
-  conversation_limit?: number
-  /** Whether the plan removes Chatbotistic/CRM branding. */
+  /** Monthly active-contact cap. 0 means unlimited. */
+  contact_limit?: number
+  /** Whether the plan ships the fully white-labelled chat widget. */
   white_label?: boolean
   allowed_domains?: string[]
   iat: number
