@@ -17,9 +17,11 @@ import crypto from 'node:crypto'
  *   - sub            stable WordPress identifier (user or site id).
  *                    Maps 1:1 to organizations.sso_subject.
  *   - email, name    provisioning details for the CRM user.
- *   - Memberistic asserts: plan.
+ *   - Memberistic asserts: plan, agent_limit, widget_limit,
+ *     domain_limit, conversation_limit, white_label (from the plan's
+ *     settings JSON — see the SaaS connector plugin module).
  *   - Licenseistic asserts: license_key, license_status,
- *     agent_limit, widget_limit, domain_limit, allowed_domains.
+ *     allowed_domains.
  *   - iat, exp       issued-at / expiry, unix seconds.
  */
 
@@ -33,6 +35,10 @@ export interface SsoClaims {
   agent_limit?: number
   widget_limit?: number
   domain_limit?: number
+  /** Monthly conversation cap. 0 means unlimited. */
+  conversation_limit?: number
+  /** Whether the plan removes Chatbotistic/CRM branding. */
+  white_label?: boolean
   allowed_domains?: string[]
   iat: number
   exp: number

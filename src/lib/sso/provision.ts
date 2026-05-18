@@ -27,6 +27,9 @@ export async function provisionFromClaims(
     agent_limit: clampInt(claims.agent_limit, 1),
     widget_limit: clampInt(claims.widget_limit, 1),
     domain_limit: clampInt(claims.domain_limit, 1),
+    // 0 is valid here — it means "unlimited" (the Agency tier).
+    conversation_limit: clampInt(claims.conversation_limit, 200),
+    white_label: claims.white_label === true,
     allowed_domains: normalizeDomains(claims.allowed_domains),
     entitlements_synced_at: new Date().toISOString(),
   }
