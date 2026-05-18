@@ -99,15 +99,15 @@ export function PipelineAnalytics({ stages, deals }: PipelineAnalyticsProps) {
 
   return (
     <TooltipProvider>
-      <div className="grid grid-cols-2 gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-4 sm:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-card/60 p-4 sm:grid-cols-3 xl:grid-cols-6">
         <Metric
-          icon={<BarChart3 className="h-4 w-4 text-slate-400" />}
+          icon={<BarChart3 className="h-4 w-4 text-muted-foreground" />}
           label="Total Deals"
           value={String(stats.totalCount)}
           tooltip="Count of every deal in this pipeline that isn't marked as Lost. Won deals are still included."
         />
         <Metric
-          icon={<DollarSign className="h-4 w-4 text-violet-400" />}
+          icon={<DollarSign className="h-4 w-4 text-primary" />}
           label="Pipeline Value"
           value={formatCurrency(stats.totalValue)}
           tooltip="Sum of the dollar values of all deals in this pipeline, excluding deals marked as Lost."
@@ -125,7 +125,7 @@ export function PipelineAnalytics({ stages, deals }: PipelineAnalyticsProps) {
           tooltip="Expected revenue: each open deal's value × its stage probability. First stage ≈ 10%, stages progress up to 90%, Won = 100%. Lost deals are excluded."
         />
         <Metric
-          icon={<Trophy className="h-4 w-4 text-violet-400" />}
+          icon={<Trophy className="h-4 w-4 text-primary" />}
           label="Won This Month"
           value={String(stats.wonThisMonth)}
           tooltip="Deals marked as Won since the first day of the current month."
@@ -153,8 +153,8 @@ function Metric({
   tooltip: string;
 }) {
   return (
-    <div className="rounded-lg bg-slate-800/50 p-3">
-      <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-400">
+    <div className="rounded-lg bg-muted/50 p-3">
+      <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
         {icon}
         <span>{label}</span>
         <Tooltip>
@@ -163,7 +163,7 @@ function Metric({
               <button
                 type="button"
                 aria-label={`How ${label} is calculated`}
-                className="ml-auto text-slate-500 hover:text-slate-300 focus:outline-none"
+                className="ml-auto text-muted-foreground hover:text-foreground focus:outline-none"
               />
             }
           >
@@ -174,7 +174,7 @@ function Metric({
           </TooltipContent>
         </Tooltip>
       </div>
-      <p className="mt-1 text-base font-semibold text-white">{value}</p>
+      <p className="mt-1 text-base font-semibold text-foreground">{value}</p>
     </div>
   );
 }
