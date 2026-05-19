@@ -87,6 +87,28 @@ optional `SSO_MAX_SKEW_SECONDS` (default 300). Run migration `012`.
 
 A member with no active membership is treated as the **Free** tier.
 
+## Chat widget license activation
+
+The customer-installed **Chatbotistic Widget** plugin activates its
+license against `chatbotistic.com/wp-json/licenseistic/v1/`. Licenseistic
+ships a **widget bridge** (`class-wpistic-lsi-widget-bridge.php`) serving
+the three paths the widget calls — `/activate`, `/heartbeat`,
+`/deactivate` — and returning the flat shape it expects:
+
+```
+{ ok, status, tier, plan_name, max_widgets, max_agents,
+  max_domains, expires_at, customer_email }
+```
+
+The bridge runs the real Licenseistic activation, then joins the
+license's customer to their Memberistic plan so the widget receives the
+correct per-tier caps. Memberistic's `0 = unlimited` is translated to
+the widget's `-1 = unlimited` convention. A customer with no active
+membership falls back to Free-tier caps (1 widget / 1 agent / 1 domain).
+
+This is independent of the CRM SSO bridge above — the widget is managed
+from its own WordPress admin on the customer's site.
+
 ## Notes
 
 - `seed_default_plans()` only runs on **first install**. An existing
