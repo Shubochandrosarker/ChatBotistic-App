@@ -30,10 +30,38 @@ deployable app**:
     └── ...            ← server chunks
 ```
 
-## 1. Build the app
+## Recommended: build via GitHub Actions
 
-Build **locally or in CI**, not on the shared host — a Next build can
-exceed the RAM of an entry-level plan.
+The repo ships a `Build deployment artifact` workflow
+(`.github/workflows/deploy.yml`) that builds the app correctly and
+hands you a single downloadable zip — no local Node setup, and no
+thousands-of-files upload that stalls in the hPanel File Manager.
+
+**One-time setup.** In GitHub → repo **Settings → Secrets and variables
+→ Actions → New repository secret**, add:
+
+| Secret | Value |
+| ------ | ----- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → `anon` `public` key |
+| `NEXT_PUBLIC_SITE_URL` | optional — defaults to `https://crm.wpistic.com` |
+
+**Each deploy.** GitHub → **Actions → Build deployment artifact → Run
+workflow**. When it finishes, open the run and download the
+**`crm-standalone`** artifact. Unzip it — it contains `server.js`,
+`node_modules/`, `public/`, and `.next/` at the top level. That is the
+complete app; skip to step 2.
+
+> Why this matters: `NEXT_PUBLIC_*` values are baked into the browser
+> bundle at **build time**. The workflow builds with your real Supabase
+> values from the secrets above, so the bundle works. (The separate
+> `CI` workflow builds with dummy values for checks only — never
+> deploy that build.)
+
+## 1. Build the app (local alternative)
+
+If you'd rather build yourself, build **locally**, not on the shared
+host — a Next build can exceed the RAM of an entry-level plan.
 
 Public env vars (`NEXT_PUBLIC_*`) are inlined into the client bundle at
 **build time**, so they must be set before you build. Put the
@@ -43,8 +71,14 @@ them:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co \
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key \
-NEXT_PUBLIC_SITE_URL=https://crm.example.com \
+NEXT_PUBLIC_SITE_URL=https://crm.wpistic.com \
 npm run build
+```
+
+Then zip the output so it uploads as a single file (see step 3):
+
+```bash
+cd .next/standalone && zip -r ../../crm-standalone.zip .
 ```
 
 Server-only secrets (`SUPABASE_SERVICE_ROLE_KEY`, `ENCRYPTION_KEY`,
@@ -53,22 +87,47 @@ not bake them in; set them in hPanel (step 4).
 
 ## 2. Create the Node.js app in hPanel
 
-In hPanel: **Websites → your domain → Advanced → Node.js** (labelled
-"Setup Node.js App" on some plans). Create an application:
+First make sure the **subdomain exists**: hPanel → **Domains →
+Subdomains** → create `crm` under `wpistic.com`. The Node.js panel
+can't attach an app to a subdomain that doesn't exist yet — a missing
+subdomain is the usual reason "Create" fails.
+
+> The Node.js app feature is only on Hostinger's **Business** web plan
+> and above (and VPS/Cloud). On the cheaper Premium plan the option is
+> absent or errors — check your plan if Create keeps failing.
+
+Then in hPanel: **Websites → your domain → Advanced → Node.js**
+(labelled "Setup Node.js App" on some plans). Create an application:
 
 | Field                   | Value                                              |
 | ----------------------- | -------------------------------------------------- |
 | Node.js version         | 20 or 22 (the app requires `>=20`)                 |
-| Application root         | a folder under your domain, e.g. `crm`             |
-| Application URL          | the domain/subdomain to serve from                 |
+| Application root         | a fresh, empty folder, e.g. `crm`                  |
+| Application URL          | `crm.wpistic.com`                                  |
 | Application startup file | `server.js`                                        |
+
+If a previous failed attempt left a half-created app, delete it and
+pick an empty Application root folder before retrying.
 
 ## 3. Upload the build
 
-Upload the **contents of `.next/standalone/`** (not the folder itself)
-into the Application root you chose above, via the hPanel File Manager,
-SFTP, or SSH `rsync`. The root must end up containing `server.js`,
-`node_modules/`, `public/`, and `.next/`.
+The Application root must end up containing `server.js`,
+`node_modules/`, `public/`, and `.next/` at its top level.
+
+**Upload it as one zip — do not drag thousands of files.** The hPanel
+File Manager reliably stalls or errors partway through a multi-thousand
+file `node_modules` upload. Instead:
+
+1. Upload the single zip (`crm-standalone.zip` from the local build, or
+   the artifact zip downloaded from the GitHub Actions run) into the
+   Application root.
+2. In the File Manager, right-click the zip → **Extract** → extract
+   into the same folder.
+3. Delete the zip. Confirm `server.js` now sits directly in the
+   Application root (not inside a nested subfolder — if it is, move the
+   contents up one level).
+
+SFTP or SSH `rsync` also work if you prefer and your plan allows them.
 
 **Do not run "Run NPM Install"** in the Node.js app panel. The
 standalone `node_modules/` is already complete and traced; installing
