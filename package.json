@@ -31,6 +31,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build && node scripts/copy-standalone-assets.mjs",
+    "prestart": "node scripts/ensure-build.mjs",
     "start": "next start",
     "start:standalone": "node .next/standalone/server.js",
     "lint": "eslint",
