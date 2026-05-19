@@ -9,7 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-display, var(--font-sans));
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -154,5 +154,122 @@
       border-color 0.2s ease,
       color 0.2s ease,
       fill 0.2s ease;
+  }
+}
+
+/* ---------------------------------------------------------------
+   Elevation scale — a real depth ladder so surfaces can be flat,
+   resting, raised, or floating instead of every card sharing one
+   weak shadow. Tuned softer in dark mode where shadows read harsh.
+   --------------------------------------------------------------- */
+:root {
+  --elevation-1: 0 1px 2px -1px oklch(0.21 0.02 280 / 0.08),
+    0 1px 3px oklch(0.21 0.02 280 / 0.06);
+  --elevation-2: 0 2px 4px -2px oklch(0.21 0.02 280 / 0.1),
+    0 4px 12px -2px oklch(0.21 0.02 280 / 0.08);
+  --elevation-3: 0 8px 16px -6px oklch(0.21 0.02 280 / 0.14),
+    0 12px 28px -8px oklch(0.21 0.02 280 / 0.12);
+}
+.dark {
+  --elevation-1: 0 1px 2px -1px oklch(0 0 0 / 0.4);
+  --elevation-2: 0 4px 12px -2px oklch(0 0 0 / 0.5);
+  --elevation-3: 0 12px 28px -8px oklch(0 0 0 / 0.6);
+}
+
+@utility elevation-1 {
+  box-shadow: var(--elevation-1);
+}
+@utility elevation-2 {
+  box-shadow: var(--elevation-2);
+}
+@utility elevation-3 {
+  box-shadow: var(--elevation-3);
+}
+
+@layer components {
+  /* Interactive surface — lifts and deepens its shadow on hover.
+     Use on cards/rows that are clickable. */
+  .surface-interactive {
+    box-shadow: var(--elevation-1);
+    transition:
+      box-shadow 0.18s ease,
+      transform 0.18s ease,
+      border-color 0.18s ease;
+  }
+  .surface-interactive:hover {
+    box-shadow: var(--elevation-3);
+    transform: translateY(-2px);
+  }
+}
+
+/* ---------------------------------------------------------------
+   Motion — entrance helpers layered on tw-animate-css. `.animate-rise`
+   is the house entrance; `.stagger-children` walks a short delay down
+   a list so rows cascade in rather than popping at once.
+   --------------------------------------------------------------- */
+@keyframes wpistic-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@layer utilities {
+  .animate-rise {
+    animation: wpistic-rise 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .stagger-children > * {
+    animation: wpistic-rise 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .stagger-children > *:nth-child(1) {
+    animation-delay: 0.02s;
+  }
+  .stagger-children > *:nth-child(2) {
+    animation-delay: 0.06s;
+  }
+  .stagger-children > *:nth-child(3) {
+    animation-delay: 0.1s;
+  }
+  .stagger-children > *:nth-child(4) {
+    animation-delay: 0.14s;
+  }
+  .stagger-children > *:nth-child(5) {
+    animation-delay: 0.18s;
+  }
+  .stagger-children > *:nth-child(6) {
+    animation-delay: 0.22s;
+  }
+}
+
+/* ---------------------------------------------------------------
+   Accessibility — honor the OS "reduce motion" setting everywhere.
+   Kills entrance animations, count-ups, and long transitions while
+   leaving instant state changes intact.
+   --------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Visible keyboard-focus ring for any interactive element that
+   doesn't already define one — keyboard users never lose their place. */
+@layer base {
+  a:focus-visible,
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
   }
 }

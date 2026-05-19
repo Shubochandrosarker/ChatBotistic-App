@@ -40,6 +40,7 @@ import {
 import { AUTOMATION_TEMPLATES, type TemplateSlug } from "@/lib/automations/templates"
 import { triggerMeta, formatRelative } from "@/lib/automations/trigger-meta"
 import { cn } from "@/lib/utils"
+import { EmptyState } from "@/components/dashboard/empty-state"
 
 const TEMPLATE_ORDER: TemplateSlug[] = [
   "welcome_message",
@@ -197,15 +198,12 @@ export default function AutomationsPage() {
       )}
 
       {automations.length === 0 ? (
-        <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/40">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <Zap className="h-6 w-6 text-primary" />
-          </div>
-          <p className="mt-3 text-sm font-medium text-foreground">No automations yet</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Pick a template above or create one from scratch.
-          </p>
-        </div>
+        <EmptyState
+          icon={Zap}
+          title="No automations yet"
+          hint="Pick a template above or create one from scratch."
+          action={{ label: 'New automation', href: '/automations/new' }}
+        />
       ) : (
         <ul className="space-y-3">
           {automations.map((a) => (

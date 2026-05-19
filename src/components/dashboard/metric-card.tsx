@@ -1,6 +1,9 @@
+"use client"
+
 import { ArrowDown, ArrowUp, Minus } from 'lucide-react'
 import type { ComponentType } from 'react'
 import { cn } from '@/lib/utils'
+import { useCountUp } from '@/hooks/use-count-up'
 
 /** Accent palette for the icon chip — categorical, theme-stable. */
 export type MetricAccent = 'violet' | 'blue' | 'emerald' | 'amber'
@@ -14,8 +17,10 @@ const ACCENT: Record<MetricAccent, string> = {
 
 interface MetricCardProps {
   title: string
-  /** Pre-formatted value for display (e.g. "42" or "$1,250"). */
-  value: string
+  /** Raw numeric value — animated via count-up on mount and on change. */
+  value: number
+  /** Formats the (rounded) value for display. Defaults to a locale int. */
+  format?: (n: number) => string
   icon: ComponentType<{ className?: string }>
   accent?: MetricAccent
   /**
@@ -32,21 +37,26 @@ interface MetricCardProps {
   subtitle?: string
 }
 
+const defaultFormat = (n: number) => Math.round(n).toLocaleString()
+
 export function MetricCard({
   title,
   value,
+  format = defaultFormat,
   icon: Icon,
   accent = 'violet',
   delta,
   subtitle,
 }: MetricCardProps) {
+  const animated = useCountUp(value)
+
   return (
-    <div className="group rounded-2xl bg-card p-5 ring-1 ring-foreground/[0.06] shadow-sm transition-shadow hover:shadow-md">
+    <div className="group rounded-2xl bg-card p-5 ring-1 ring-foreground/[0.06] elevation-1 transition-shadow hover:elevation-2">
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm font-medium text-muted-foreground">{title}</p>
         <div
           className={cn(
-            'flex h-10 w-10 items-center justify-center rounded-xl',
+            'flex h-10 w-10 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105',
             ACCENT[accent],
           )}
         >
@@ -54,7 +64,7 @@ export function MetricCard({
         </div>
       </div>
       <p className="mt-4 text-[30px] leading-none font-bold tabular-nums text-foreground">
-        {value}
+        {format(animated)}
       </p>
       {delta ? (
         <DeltaRow sign={delta.sign} label={delta.label} />
