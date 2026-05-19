@@ -20,7 +20,17 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { normalizePhone, phonesMatch } from '@/lib/whatsapp/phone-utils'
+import { providerFromConfigRow } from '@/lib/whatsapp/load-provider'
 import { runAutomationsForTrigger } from '@/lib/automations/engine'
+import {
+  classifyKeyword,
+  setOptOut,
+  setOptIn,
+  logSms,
+  STOP_CONFIRM_MESSAGE,
+  START_CONFIRM_MESSAGE,
+  HELP_MESSAGE,
+} from '@/lib/sms/compliance'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _adminClient: any = null
@@ -162,7 +172,7 @@ async function handleInboundMessage(params: Record<string, string>) {
   // configs' default sender numbers.
   const { data: configs, error: cfgErr } = await supabaseAdmin()
     .from('whatsapp_config')
-    .select('user_id, jasmin_default_sender')
+    .select('*')
     .eq('provider', 'jasmin')
   if (cfgErr || !configs || configs.length === 0) {
     console.error('[sms-webhook] no SMS-gateway config for inbound message')
@@ -224,6 +234,32 @@ async function handleInboundMessage(params: Record<string, string>) {
 
   await flagBroadcastReplyIfAny(userId, contact.id)
 
+  // Honor carrier opt-out / opt-in / help keywords before anything else.
+  const keyword = classifyKeyword(content)
+  if (keyword === 'stop') {
+    await setOptOut(supabaseAdmin(), userId, contact.id)
+    await sendAutoReply(config, senderPhone, STOP_CONFIRM_MESSAGE)
+  } else if (keyword === 'start') {
+    await setOptIn(supabaseAdmin(), userId, contact.id, { source: 'keyword' })
+    await sendAutoReply(config, senderPhone, START_CONFIRM_MESSAGE)
+  } else if (keyword === 'help') {
+    await sendAutoReply(config, senderPhone, HELP_MESSAGE)
+  }
+
+  await logSms(supabaseAdmin(), {
+    userId,
+    contactId: contact.id,
+    conversationId: conversation.id,
+    direction: 'inbound',
+    phone: senderPhone,
+    body: content,
+    messageId: messageId ?? null,
+    status: keyword ? `received:${keyword}` : 'received',
+  })
+
+  // A STOP message must never trigger marketing automations.
+  if (keyword === 'stop') return
+
   const triggers: (
     | 'new_contact_created'
     | 'first_inbound_message'
@@ -241,6 +277,25 @@ async function handleInboundMessage(params: Record<string, string>) {
     }).catch((err) =>
       console.error('[sms-webhook] automation dispatch failed:', err)
     )
+  }
+}
+
+/**
+ * Send a compliance auto-reply (STOP / START / HELP) through the
+ * gateway. This deliberately bypasses the consent gate — a final
+ * opt-out confirmation is permitted even after the contact opts out.
+ */
+async function sendAutoReply(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  config: any,
+  to: string,
+  text: string
+): Promise<void> {
+  try {
+    const provider = providerFromConfigRow(config)
+    await provider.sendText({ to, text })
+  } catch (err) {
+    console.error('[sms-webhook] auto-reply send failed:', err)
   }
 }
 
