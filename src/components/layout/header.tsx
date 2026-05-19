@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { LogOut, Menu, Settings as SettingsIcon, User } from "lucide-react";
+import { LogOut, Menu, Search, Settings as SettingsIcon, User } from "lucide-react";
 import {
   Avatar,
   AvatarFallback,
@@ -41,12 +42,23 @@ function getPageTitle(pathname: string): string {
 interface HeaderProps {
   /** Wired to the shell's drawer state. Used only on mobile. */
   onOpenSidebar?: () => void;
+  /** Opens the global command palette. */
+  onOpenSearch?: () => void;
 }
 
-export function Header({ onOpenSidebar }: HeaderProps) {
+export function Header({ onOpenSidebar, onOpenSearch }: HeaderProps) {
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
   const title = getPageTitle(pathname);
+
+  // Show the platform-correct shortcut hint (⌘K on macOS, Ctrl K else).
+  // `navigator` is client-only, so this resolves as a post-mount sync.
+  const [shortcut, setShortcut] = useState("Ctrl K");
+  useEffect(() => {
+    const isMac = /Mac|iP(hone|ad|od)/.test(navigator.platform);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setShortcut(isMac ? "⌘ K" : "Ctrl K");
+  }, []);
 
   const initial =
     profile?.full_name?.charAt(0)?.toUpperCase() ??
@@ -73,6 +85,27 @@ export function Header({ onOpenSidebar }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
+        {/* Global search — opens the command palette (⌘K). */}
+        <button
+          type="button"
+          onClick={onOpenSearch}
+          aria-label="Search"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:hidden"
+        >
+          <Search className="h-[18px] w-[18px]" />
+        </button>
+        <button
+          type="button"
+          onClick={onOpenSearch}
+          className="hidden h-9 w-56 items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex lg:w-64"
+        >
+          <Search className="h-4 w-4 shrink-0" />
+          <span className="flex-1 text-left">Search…</span>
+          <kbd className="rounded border border-border bg-card px-1.5 py-0.5 text-[10px] font-medium tracking-wide">
+            {shortcut}
+          </kbd>
+        </button>
+
         <ThemeToggle />
 
         <div className="hidden h-6 w-px bg-border sm:block" />
