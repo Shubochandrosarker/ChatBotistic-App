@@ -76,6 +76,7 @@ export function WhatsAppConfig() {
   const [a2pBrandId, setA2pBrandId] = useState('');
   const [a2pCampaignId, setA2pCampaignId] = useState('');
   const [a2pStatus, setA2pStatus] = useState('unregistered');
+  const [smsWidgetKey, setSmsWidgetKey] = useState('');
   const [savingCompliance, setSavingCompliance] = useState(false);
 
   // True once the user has typed into the masked secret field, meaning a
@@ -134,6 +135,7 @@ export function WhatsAppConfig() {
           setA2pBrandId(data.a2p_brand_id || '');
           setA2pCampaignId(data.a2p_campaign_id || '');
           setA2pStatus(data.a2p_status || 'unregistered');
+          setSmsWidgetKey(data.sms_widget_key || '');
           setTokenEdited(false);
         } else {
           setConfig(null);
@@ -155,6 +157,7 @@ export function WhatsAppConfig() {
           setA2pBrandId('');
           setA2pCampaignId('');
           setA2pStatus('unregistered');
+          setSmsWidgetKey('');
           setTokenEdited(false);
         }
 
@@ -948,6 +951,44 @@ export function WhatsAppConfig() {
                   <option value="rejected">Rejected</option>
                 </select>
               </div>
+
+              {smsWidgetKey && (
+                <div className="space-y-2">
+                  <Label className="text-foreground">
+                    Consent Opt-In Form
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      readOnly
+                      value={
+                        typeof window !== 'undefined'
+                          ? `${window.location.origin}/sms-optin/${smsWidgetKey}`
+                          : ''
+                      }
+                      className="bg-muted border-border text-foreground font-mono text-sm"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          `${window.location.origin}/sms-optin/${smsWidgetKey}`
+                        );
+                        toast.success('Opt-in form URL copied');
+                      }}
+                      className="shrink-0 border-border text-foreground hover:text-foreground hover:bg-muted"
+                    >
+                      <Copy className="size-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Share this hosted form so customers can opt in to SMS.
+                    Submissions are recorded as web-form consent — the express
+                    consent the send gate requires.
+                  </p>
+                </div>
+              )}
 
               <Button
                 onClick={handleSaveCompliance}

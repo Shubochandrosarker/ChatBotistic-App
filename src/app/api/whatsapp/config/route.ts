@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { encrypt } from '@/lib/whatsapp/encryption'
@@ -229,6 +230,7 @@ async function saveMetaConfig(
     jasmin_username: null,
     jasmin_password: null,
     jasmin_default_sender: null,
+    sms_widget_key: null,
     status: 'connected' as const,
   }
 
@@ -330,6 +332,7 @@ async function saveTwilioConfig(
     jasmin_username: null,
     jasmin_password: null,
     jasmin_default_sender: null,
+    sms_widget_key: null,
     status: 'connected' as const,
   }
 
@@ -419,12 +422,25 @@ async function saveJasminConfig(
     )
   }
 
+  // Preserve an existing consent-widget key; mint one for a new config.
+  let widgetKey: string | null = null
+  if (existingId) {
+    const { data: existingRow } = await supabase
+      .from('whatsapp_config')
+      .select('sms_widget_key')
+      .eq('id', existingId)
+      .maybeSingle()
+    widgetKey = existingRow?.sms_widget_key ?? null
+  }
+  if (!widgetKey) widgetKey = randomUUID()
+
   const row = {
     provider: 'jasmin' as const,
     jasmin_base_url: String(jasmin_base_url).trim().replace(/\/+$/, ''),
     jasmin_username,
     jasmin_password: encryptedPassword,
     jasmin_default_sender: jasmin_default_sender || null,
+    sms_widget_key: widgetKey,
     // Clear any stale credentials from other providers.
     phone_number_id: null,
     waba_id: null,
@@ -471,7 +487,8 @@ async function saveJasminConfig(
  * registration progress without re-entering the gateway password.
  *
  * Body (all optional): { sms_quiet_hours_start, sms_quiet_hours_end,
- *   sms_timezone, a2p_brand_id, a2p_campaign_id, a2p_status }
+ *   sms_timezone, a2p_brand_id, a2p_campaign_id, a2p_status,
+ *   regenerate_widget_key }
  */
 const A2P_STATUSES = ['unregistered', 'pending', 'registered', 'rejected']
 
@@ -545,6 +562,10 @@ export async function PATCH(request: Request) {
         )
       }
       update.a2p_status = body.a2p_status
+    }
+
+    if (body.regenerate_widget_key === true) {
+      update.sms_widget_key = randomUUID()
     }
 
     if (Object.keys(update).length === 0) {

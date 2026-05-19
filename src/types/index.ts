@@ -122,6 +122,8 @@ export interface WhatsAppConfig {
   a2p_brand_id?: string;
   a2p_campaign_id?: string;
   a2p_status?: 'unregistered' | 'pending' | 'registered' | 'rejected';
+  /** Public key for the hosted SMS consent-capture form. */
+  sms_widget_key?: string;
   status: 'connected' | 'disconnected';
   connected_at?: string;
 }
