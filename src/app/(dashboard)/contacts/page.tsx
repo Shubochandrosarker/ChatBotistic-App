@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { Contact, Tag, ContactTag } from '@/types';
@@ -54,9 +55,13 @@ interface ContactWithTags extends Contact {
 export default function ContactsPage() {
   const supabase = createClient();
 
+  // Seed the search box from `?q=` so the command palette can deep-link
+  // straight to a filtered contact list.
+  const searchParams = useSearchParams();
+
   const [contacts, setContacts] = useState<ContactWithTags[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(searchParams.get('q') ?? '');
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
 

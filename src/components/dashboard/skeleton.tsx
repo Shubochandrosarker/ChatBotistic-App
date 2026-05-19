@@ -1,13 +1,9 @@
 import { cn } from '@/lib/utils'
+import { Skeleton } from '@/components/ui/skeleton'
 
-/**
- * Shared skeleton primitive — a pulsing slate block sized to whatever
- * container it's dropped into. Used by every dashboard widget while
- * its data fetches.
- */
-export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn('animate-pulse rounded-md bg-muted', className)} />
-}
+// Re-exported so existing dashboard widgets keep importing `Skeleton`
+// from here while the canonical primitive lives in `ui/skeleton`.
+export { Skeleton }
 
 export function SkeletonCard({ className }: { className?: string }) {
   return (
