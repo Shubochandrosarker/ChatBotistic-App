@@ -92,7 +92,7 @@ export interface Message {
   created_at: string;
 }
 
-export type WhatsAppProviderName = 'meta' | 'twilio';
+export type WhatsAppProviderName = 'meta' | 'twilio' | 'jasmin';
 
 export interface WhatsAppConfig {
   id: string;
@@ -110,6 +110,11 @@ export interface WhatsAppConfig {
   twilio_auth_token?: string;
   twilio_whatsapp_number?: string;
   twilio_messaging_service_sid?: string;
+  // Self-hosted SMS gateway (Jasmin) fields — nullable for other providers.
+  jasmin_base_url?: string;
+  jasmin_username?: string;
+  jasmin_password?: string;
+  jasmin_default_sender?: string;
   status: 'connected' | 'disconnected';
   connected_at?: string;
 }

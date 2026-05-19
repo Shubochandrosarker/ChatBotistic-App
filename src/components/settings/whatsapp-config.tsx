@@ -33,7 +33,7 @@ const MASKED_TOKEN = '••••••••••••••••';
 
 type ConnectionStatus = 'connected' | 'disconnected' | 'unknown';
 type ResetReason = 'token_corrupted' | 'provider_error' | null;
-type Provider = 'meta' | 'twilio';
+type Provider = 'meta' | 'twilio' | 'jasmin';
 
 export function WhatsAppConfig() {
   const supabase = createClient();
@@ -63,6 +63,12 @@ export function WhatsAppConfig() {
   const [twilioWhatsappNumber, setTwilioWhatsappNumber] = useState('');
   const [twilioMessagingServiceSid, setTwilioMessagingServiceSid] = useState('');
 
+  // Self-hosted SMS gateway (Jasmin) credentials
+  const [jasminBaseUrl, setJasminBaseUrl] = useState('');
+  const [jasminUsername, setJasminUsername] = useState('');
+  const [jasminPassword, setJasminPassword] = useState('');
+  const [jasminDefaultSender, setJasminDefaultSender] = useState('');
+
   // True once the user has typed into the masked secret field, meaning a
   // fresh secret is available to send (the API needs it to re-verify).
   const [tokenEdited, setTokenEdited] = useState(false);
@@ -70,7 +76,9 @@ export function WhatsAppConfig() {
   const webhookPath =
     provider === 'twilio'
       ? '/api/whatsapp/twilio-webhook'
-      : '/api/whatsapp/webhook';
+      : provider === 'jasmin'
+        ? '/api/sms/webhook'
+        : '/api/whatsapp/webhook';
   const webhookUrl =
     typeof window !== 'undefined' ? `${window.location.origin}${webhookPath}` : '';
 
@@ -99,6 +107,10 @@ export function WhatsAppConfig() {
           setTwilioAuthToken(data.twilio_auth_token ? MASKED_TOKEN : '');
           setTwilioWhatsappNumber(data.twilio_whatsapp_number || '');
           setTwilioMessagingServiceSid(data.twilio_messaging_service_sid || '');
+          setJasminBaseUrl(data.jasmin_base_url || '');
+          setJasminUsername(data.jasmin_username || '');
+          setJasminPassword(data.jasmin_password ? MASKED_TOKEN : '');
+          setJasminDefaultSender(data.jasmin_default_sender || '');
           setTokenEdited(false);
         } else {
           setConfig(null);
@@ -110,6 +122,10 @@ export function WhatsAppConfig() {
           setTwilioAuthToken('');
           setTwilioWhatsappNumber('');
           setTwilioMessagingServiceSid('');
+          setJasminBaseUrl('');
+          setJasminUsername('');
+          setJasminPassword('');
+          setJasminDefaultSender('');
           setTokenEdited(false);
         }
 
@@ -183,6 +199,26 @@ export function WhatsAppConfig() {
         twilio_auth_token: twilioAuthToken.trim(),
         twilio_whatsapp_number: twilioWhatsappNumber.trim() || null,
         twilio_messaging_service_sid: twilioMessagingServiceSid.trim() || null,
+      };
+    } else if (provider === 'jasmin') {
+      if (!jasminBaseUrl.trim()) {
+        toast.error('Gateway URL is required');
+        return;
+      }
+      if (!jasminUsername.trim()) {
+        toast.error('Gateway username is required');
+        return;
+      }
+      if (jasminPassword === MASKED_TOKEN || !jasminPassword.trim()) {
+        toast.error('Please re-enter the gateway password to save changes');
+        return;
+      }
+      payload = {
+        provider: 'jasmin',
+        jasmin_base_url: jasminBaseUrl.trim(),
+        jasmin_username: jasminUsername.trim(),
+        jasmin_password: jasminPassword.trim(),
+        jasmin_default_sender: jasminDefaultSender.trim() || null,
       };
     } else {
       if (!phoneNumberId.trim()) {
@@ -299,6 +335,10 @@ export function WhatsAppConfig() {
       setTwilioAuthToken('');
       setTwilioWhatsappNumber('');
       setTwilioMessagingServiceSid('');
+      setJasminBaseUrl('');
+      setJasminUsername('');
+      setJasminPassword('');
+      setJasminDefaultSender('');
       setTokenEdited(false);
       setConnectionStatus('disconnected');
       setResetReason(null);
@@ -395,8 +435,8 @@ export function WhatsAppConfig() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-3">
-              {(['meta', 'twilio'] as const).map((p) => (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {(['meta', 'twilio', 'jasmin'] as const).map((p) => (
                 <button
                   key={p}
                   type="button"
@@ -408,12 +448,18 @@ export function WhatsAppConfig() {
                   }`}
                 >
                   <span className="block text-sm font-medium text-foreground">
-                    {p === 'meta' ? 'Meta Cloud API' : 'Twilio'}
+                    {p === 'meta'
+                      ? 'Meta Cloud API'
+                      : p === 'twilio'
+                        ? 'Twilio'
+                        : 'SMS Gateway'}
                   </span>
                   <span className="block text-xs text-muted-foreground mt-0.5">
                     {p === 'meta'
                       ? 'Direct WhatsApp Business Platform'
-                      : 'WhatsApp via Twilio senders'}
+                      : p === 'twilio'
+                        ? 'WhatsApp via Twilio senders'
+                        : 'Self-hosted Jasmin SMS gateway'}
                   </span>
                 </button>
               ))}
@@ -428,7 +474,9 @@ export function WhatsAppConfig() {
             <CardDescription className="text-muted-foreground">
               {provider === 'twilio'
                 ? 'Enter your Twilio account credentials and WhatsApp sender.'
-                : 'Enter your Meta WhatsApp Business API credentials.'}
+                : provider === 'jasmin'
+                  ? 'Enter the connection details for your self-hosted Jasmin SMS gateway.'
+                  : 'Enter your Meta WhatsApp Business API credentials.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -514,6 +562,84 @@ export function WhatsAppConfig() {
                   <p className="text-xs text-muted-foreground">
                     If set, messages are sent through this Messaging Service
                     instead of the bare sender number.
+                  </p>
+                </div>
+              </>
+            ) : provider === 'jasmin' ? (
+              <>
+                <div className="space-y-2">
+                  <Label className="text-foreground">Gateway URL</Label>
+                  <Input
+                    placeholder="https://sms.yourdomain.com"
+                    value={jasminBaseUrl}
+                    onChange={(e) => setJasminBaseUrl(e.target.value)}
+                    className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Public base URL of your Jasmin gateway&apos;s HTTP API.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-foreground">Gateway Username</Label>
+                  <Input
+                    placeholder="Jasmin HTTP user"
+                    value={jasminUsername}
+                    onChange={(e) => setJasminUsername(e.target.value)}
+                    className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-foreground">Gateway Password</Label>
+                  <div className="relative">
+                    <Input
+                      type={showToken ? 'text' : 'password'}
+                      placeholder="Enter the gateway password"
+                      value={jasminPassword}
+                      onChange={(e) => {
+                        setJasminPassword(e.target.value);
+                        setTokenEdited(true);
+                      }}
+                      onFocus={() => {
+                        if (jasminPassword === MASKED_TOKEN) {
+                          setJasminPassword('');
+                          setTokenEdited(true);
+                        }
+                      }}
+                      className="bg-muted border-border text-foreground placeholder:text-muted-foreground pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowToken(!showToken)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showToken ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </button>
+                  </div>
+                  {config && !tokenEdited && (
+                    <p className="text-xs text-muted-foreground">
+                      Password is hidden for security. Re-enter it to update
+                      configuration.
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-foreground">Default Sender ID</Label>
+                  <Input
+                    placeholder="e.g. +14155550100 or a short code"
+                    value={jasminDefaultSender}
+                    onChange={(e) => setJasminDefaultSender(e.target.value)}
+                    className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    The sender number or alphanumeric ID outbound SMS is sent
+                    from. Inbound replies are matched to this account by it.
                   </p>
                 </div>
               </>
@@ -611,7 +737,9 @@ export function WhatsAppConfig() {
             <CardDescription className="text-muted-foreground">
               {provider === 'twilio'
                 ? 'Set this URL as the inbound webhook on your Twilio WhatsApp sender.'
-                : 'Use this URL as your webhook callback in the Meta App Dashboard.'}
+                : provider === 'jasmin'
+                  ? 'Point your Jasmin gateway at this URL for inbound SMS and delivery receipts.'
+                  : 'Use this URL as your webhook callback in the Meta App Dashboard.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -637,6 +765,14 @@ export function WhatsAppConfig() {
                   In the Twilio Console, set this as the &quot;When a message
                   comes in&quot; URL (HTTP POST) for your WhatsApp sender. The
                   same URL also accepts delivery-status callbacks.
+                </p>
+              )}
+              {provider === 'jasmin' && (
+                <p className="text-xs text-muted-foreground">
+                  Configure your Jasmin MO (inbound) HTTP connector to POST
+                  here, and append <code>?token=</code> with your{' '}
+                  <code>SMS_WEBHOOK_SECRET</code>. Delivery receipts are wired
+                  to this URL automatically on each send.
                 </p>
               )}
             </div>
@@ -710,11 +846,91 @@ export function WhatsAppConfig() {
             <CardDescription className="text-muted-foreground">
               {provider === 'twilio'
                 ? 'Connect WhatsApp through your Twilio account.'
-                : 'Follow these steps to connect your WhatsApp Business API.'}
+                : provider === 'jasmin'
+                  ? 'Connect your self-hosted Jasmin SMS gateway.'
+                  : 'Follow these steps to connect your WhatsApp Business API.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {provider === 'twilio' ? (
+            {provider === 'jasmin' ? (
+              <Accordion>
+                <AccordionItem className="border-border">
+                  <AccordionTrigger className="text-foreground hover:text-foreground hover:no-underline">
+                    <span className="flex items-center gap-2">
+                      <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-foreground">
+                        1
+                      </span>
+                      Stand up a Jasmin gateway
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground">
+                    <ol className="list-decimal list-inside space-y-1 text-sm">
+                      <li>
+                        Deploy{' '}
+                        <span className="text-primary">Jasmin SMS Gateway</span>{' '}
+                        on a server you control
+                      </li>
+                      <li>
+                        Expose its HTTP API behind HTTPS (e.g. a reverse proxy)
+                      </li>
+                      <li>
+                        Create an HTTP user and set its credentials below
+                      </li>
+                    </ol>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem className="border-border">
+                  <AccordionTrigger className="text-foreground hover:text-foreground hover:no-underline">
+                    <span className="flex items-center gap-2">
+                      <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-foreground">
+                        2
+                      </span>
+                      Connect an SMPP route
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground">
+                    <ol className="list-decimal list-inside space-y-1 text-sm">
+                      <li>
+                        Add an SMPP connector for your carrier or aggregator
+                      </li>
+                      <li>Configure MT routes so outbound SMS has a path</li>
+                      <li>
+                        Register your A2P campaign with the carrier before
+                        sending production traffic
+                      </li>
+                    </ol>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem className="border-border">
+                  <AccordionTrigger className="text-foreground hover:text-foreground hover:no-underline">
+                    <span className="flex items-center gap-2">
+                      <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-foreground">
+                        3
+                      </span>
+                      Route inbound messages here
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground">
+                    <ol className="list-decimal list-inside space-y-1 text-sm">
+                      <li>
+                        Add an MO route with an HTTP connector pointing at the{' '}
+                        <strong className="text-foreground">
+                          Webhook Callback URL
+                        </strong>{' '}
+                        above
+                      </li>
+                      <li>
+                        Append <code>?token=</code> with your{' '}
+                        <code>SMS_WEBHOOK_SECRET</code>
+                      </li>
+                      <li>Send a test SMS to confirm the round trip</li>
+                    </ol>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            ) : provider === 'twilio' ? (
               <Accordion>
                 <AccordionItem className="border-border">
                   <AccordionTrigger className="text-foreground hover:text-foreground hover:no-underline">
@@ -908,7 +1124,9 @@ export function WhatsAppConfig() {
                 href={
                   provider === 'twilio'
                     ? 'https://www.twilio.com/docs/whatsapp'
-                    : 'https://developers.facebook.com/docs/whatsapp/cloud-api/get-started'
+                    : provider === 'jasmin'
+                      ? 'https://docs.jasminsms.com/'
+                      : 'https://developers.facebook.com/docs/whatsapp/cloud-api/get-started'
                 }
                 target="_blank"
                 rel="noopener noreferrer"
@@ -917,7 +1135,9 @@ export function WhatsAppConfig() {
                 <ExternalLink className="size-3.5" />
                 {provider === 'twilio'
                   ? 'Twilio WhatsApp Documentation'
-                  : 'Meta WhatsApp API Documentation'}
+                  : provider === 'jasmin'
+                    ? 'Jasmin SMS Gateway Documentation'
+                    : 'Meta WhatsApp API Documentation'}
               </a>
             </div>
           </CardContent>

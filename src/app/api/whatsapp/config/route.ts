@@ -142,7 +142,12 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const provider: 'meta' | 'twilio' = body.provider === 'twilio' ? 'twilio' : 'meta'
+    const provider: 'meta' | 'twilio' | 'jasmin' =
+      body.provider === 'twilio'
+        ? 'twilio'
+        : body.provider === 'jasmin'
+          ? 'jasmin'
+          : 'meta'
 
     const { data: existing } = await supabase
       .from('whatsapp_config')
@@ -152,6 +157,9 @@ export async function POST(request: Request) {
 
     if (provider === 'twilio') {
       return saveTwilioConfig(supabase, user.id, body, existing?.id)
+    }
+    if (provider === 'jasmin') {
+      return saveJasminConfig(supabase, user.id, body, existing?.id)
     }
     return saveMetaConfig(supabase, user.id, body, existing?.id)
   } catch (error) {
@@ -212,11 +220,15 @@ async function saveMetaConfig(
     waba_id: waba_id || null,
     access_token: encryptedAccessToken,
     verify_token: encryptedVerifyToken,
-    // Clear any stale Twilio credentials so the row is unambiguous.
+    // Clear any stale credentials from other providers.
     twilio_account_sid: null,
     twilio_auth_token: null,
     twilio_whatsapp_number: null,
     twilio_messaging_service_sid: null,
+    jasmin_base_url: null,
+    jasmin_username: null,
+    jasmin_password: null,
+    jasmin_default_sender: null,
     status: 'connected' as const,
   }
 
@@ -309,11 +321,15 @@ async function saveTwilioConfig(
     twilio_auth_token: encryptedAuthToken,
     twilio_whatsapp_number: twilio_whatsapp_number || null,
     twilio_messaging_service_sid: twilio_messaging_service_sid || null,
-    // Clear any stale Meta credentials so the row is unambiguous.
+    // Clear any stale credentials from other providers.
     phone_number_id: null,
     waba_id: null,
     access_token: null,
     verify_token: null,
+    jasmin_base_url: null,
+    jasmin_username: null,
+    jasmin_password: null,
+    jasmin_default_sender: null,
     status: 'connected' as const,
   }
 
@@ -338,6 +354,110 @@ async function saveTwilioConfig(
   return NextResponse.json({
     success: true,
     provider: 'twilio',
+    phone_info: toPhoneInfo(info),
+  })
+}
+
+async function saveJasminConfig(
+  supabase: any,
+  userId: string,
+  body: any,
+  existingId?: string
+) {
+  const {
+    jasmin_base_url,
+    jasmin_username,
+    jasmin_password,
+    jasmin_default_sender,
+  } = body
+
+  if (!jasmin_base_url || !jasmin_username || !jasmin_password) {
+    return NextResponse.json(
+      {
+        error:
+          'jasmin_base_url, jasmin_username and jasmin_password are required',
+      },
+      { status: 400 }
+    )
+  }
+  if (!/^https?:\/\//i.test(String(jasmin_base_url))) {
+    return NextResponse.json(
+      { error: 'jasmin_base_url must be an http(s) URL' },
+      { status: 400 }
+    )
+  }
+
+  let info: ConnectionInfo
+  try {
+    info = await createWhatsAppProvider({
+      provider: 'jasmin',
+      baseUrl: jasmin_base_url,
+      username: jasmin_username,
+      password: jasmin_password,
+      defaultSender: jasmin_default_sender || '',
+    }).verifyConnection()
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown gateway error'
+    console.error('Jasmin verification failed during save:', message)
+    return NextResponse.json(
+      { error: `SMS gateway error: ${message}` },
+      { status: 400 }
+    )
+  }
+
+  let encryptedPassword: string
+  try {
+    encryptedPassword = encrypt(jasmin_password)
+  } catch (err) {
+    console.error('Encryption failed:', err)
+    return NextResponse.json(
+      {
+        error:
+          'Failed to encrypt the gateway password. Check that ENCRYPTION_KEY is a valid 64-character hex string.',
+      },
+      { status: 500 }
+    )
+  }
+
+  const row = {
+    provider: 'jasmin' as const,
+    jasmin_base_url: String(jasmin_base_url).trim().replace(/\/+$/, ''),
+    jasmin_username,
+    jasmin_password: encryptedPassword,
+    jasmin_default_sender: jasmin_default_sender || null,
+    // Clear any stale credentials from other providers.
+    phone_number_id: null,
+    waba_id: null,
+    access_token: null,
+    verify_token: null,
+    twilio_account_sid: null,
+    twilio_auth_token: null,
+    twilio_whatsapp_number: null,
+    twilio_messaging_service_sid: null,
+    status: 'connected' as const,
+  }
+
+  const result = existingId
+    ? await supabase
+        .from('whatsapp_config')
+        .update({
+          ...row,
+          connected_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId)
+    : await supabase
+        .from('whatsapp_config')
+        .insert({ ...row, user_id: userId, connected_at: new Date().toISOString() })
+
+  if (result.error) {
+    console.error('Error saving whatsapp_config (jasmin):', result.error)
+    return NextResponse.json({ error: 'Failed to save configuration' }, { status: 500 })
+  }
+
+  return NextResponse.json({
+    success: true,
+    provider: 'jasmin',
     phone_info: toPhoneInfo(info),
   })
 }
