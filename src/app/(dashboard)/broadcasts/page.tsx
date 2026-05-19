@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table';
 import { Radio, Plus, Loader2 } from 'lucide-react';
 import { getBroadcastStatus } from '@/lib/broadcast-status';
+import { EmptyState } from '@/components/dashboard/empty-state';
 
 /**
  * Poll cadence while any broadcast is sending. Kept modest so we don't
@@ -191,20 +192,12 @@ export default function BroadcastsPage() {
       </div>
 
       {broadcasts.length === 0 ? (
-        <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-border bg-card">
-          <Radio className="mb-3 h-10 w-10 text-muted-foreground" />
-          <p className="text-sm font-medium text-foreground">No broadcasts yet</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Create your first broadcast to reach your contacts at scale.
-          </p>
-          <Button
-            onClick={() => router.push('/broadcasts/new')}
-            className="mt-4 bg-primary text-primary-foreground hover:bg-primary"
-          >
-            <Plus className="h-4 w-4" />
-            New Broadcast
-          </Button>
-        </div>
+        <EmptyState
+          icon={Radio}
+          title="No broadcasts yet"
+          hint="Create your first broadcast to reach your contacts at scale."
+          action={{ label: 'New broadcast', href: '/broadcasts/new' }}
+        />
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <Table>

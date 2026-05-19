@@ -25,6 +25,7 @@ import type {
 } from '@/lib/dashboard/types'
 
 import { MetricCard } from '@/components/dashboard/metric-card'
+import { SetupChecklist } from '@/components/dashboard/setup-checklist'
 import { SkeletonCard } from '@/components/dashboard/skeleton'
 import { QuickActions } from '@/components/dashboard/quick-actions'
 import { ConversationsChart } from '@/components/dashboard/conversations-chart'
@@ -118,26 +119,29 @@ export default function DashboardPage() {
   return (
     <div className="space-y-5">
       {/* Hero header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary/70 p-6 text-primary-foreground shadow-sm">
+      <div className="animate-rise relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary/70 p-6 text-primary-foreground elevation-2">
         <div className="absolute -right-8 -top-10 h-40 w-40 rounded-full bg-white/10" />
         <div className="absolute -bottom-14 right-20 h-32 w-32 rounded-full bg-white/[0.07]" />
         <div className="relative">
-          <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
+          <h1 className="font-heading text-2xl font-bold tracking-tight">Welcome back</h1>
           <p className="mt-1 max-w-xl text-sm text-primary-foreground/80">
             Live analytics across conversations, contacts, deals, broadcasts, and automations.
           </p>
         </div>
       </div>
 
+      {/* First-run setup — self-hides once complete or dismissed. */}
+      <SetupChecklist />
+
       {/* Metric cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger-children grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {metricsLoading || !metrics ? (
           Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
             <MetricCard
               title="Active Conversations"
-              value={metrics.activeConversations.current.toLocaleString()}
+              value={metrics.activeConversations.current}
               icon={MessageSquare}
               accent="violet"
               delta={{
@@ -147,7 +151,7 @@ export default function DashboardPage() {
             />
             <MetricCard
               title="New Contacts Today"
-              value={metrics.newContactsToday.current.toLocaleString()}
+              value={metrics.newContactsToday.current}
               icon={UserPlus}
               accent="blue"
               delta={{
@@ -161,14 +165,15 @@ export default function DashboardPage() {
             />
             <MetricCard
               title="Open Deals Value"
-              value={formatCurrency(metrics.openDealsValue)}
+              value={metrics.openDealsValue}
+              format={formatCurrency}
               icon={DollarSign}
               accent="emerald"
               subtitle={`${metrics.openDealsCount} open deal${metrics.openDealsCount === 1 ? '' : 's'}`}
             />
             <MetricCard
               title="Messages Sent Today"
-              value={metrics.messagesSentToday.current.toLocaleString()}
+              value={metrics.messagesSentToday.current}
               icon={Send}
               accent="amber"
               delta={{

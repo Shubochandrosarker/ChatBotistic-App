@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { NotificationCenter } from "@/components/layout/notification-center";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -106,6 +107,7 @@ export function Header({ onOpenSidebar, onOpenSearch }: HeaderProps) {
           </kbd>
         </button>
 
+        <NotificationCenter />
         <ThemeToggle />
 
         <div className="hidden h-6 w-px bg-border sm:block" />
