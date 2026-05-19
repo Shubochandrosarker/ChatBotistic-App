@@ -181,6 +181,14 @@ npm run start:standalone   # runs node .next/standalone/server.js
 
 ## Troubleshooting
 
+- **"Could not find a production build" / it ran `next start` without
+  `next build`** — the app is being started with `npm start` (which is
+  `next start`). That is **not** how this app deploys. It uses
+  `output: "standalone"`: you build *off* the host and run the
+  generated `server.js` directly. Fix: set the hPanel **Application
+  startup file** to `server.js`, upload the prebuilt standalone bundle
+  (step 3), and never run `npm start` / `npm run build` on the host.
+  The startup file must be `server.js`, not an npm script.
 - **Page loads but is unstyled / JS 404s** — `.next/static/` (and/or
   `public/`) was not uploaded into the Application root. Re-run
   `npm run build` and re-upload the whole `.next/standalone/` contents.
