@@ -463,6 +463,127 @@ async function saveJasminConfig(
 }
 
 /**
+ * PATCH /api/whatsapp/config
+ *
+ * Updates only the SMS compliance + A2P/TCR registration fields on the
+ * existing config row. Unlike POST it neither re-verifies the provider
+ * nor touches any secret, so a tenant can adjust quiet hours or record
+ * registration progress without re-entering the gateway password.
+ *
+ * Body (all optional): { sms_quiet_hours_start, sms_quiet_hours_end,
+ *   sms_timezone, a2p_brand_id, a2p_campaign_id, a2p_status }
+ */
+const A2P_STATUSES = ['unregistered', 'pending', 'registered', 'rejected']
+
+function validHour(v: unknown): v is number | null {
+  return v === null || (Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 23)
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const supabase = await createClient()
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const update: Record<string, unknown> = {}
+
+    if ('sms_quiet_hours_start' in body) {
+      if (!validHour(body.sms_quiet_hours_start)) {
+        return NextResponse.json(
+          { error: 'sms_quiet_hours_start must be an integer 0-23 or null' },
+          { status: 400 }
+        )
+      }
+      update.sms_quiet_hours_start = body.sms_quiet_hours_start
+    }
+    if ('sms_quiet_hours_end' in body) {
+      if (!validHour(body.sms_quiet_hours_end)) {
+        return NextResponse.json(
+          { error: 'sms_quiet_hours_end must be an integer 0-23 or null' },
+          { status: 400 }
+        )
+      }
+      update.sms_quiet_hours_end = body.sms_quiet_hours_end
+    }
+    if ('sms_timezone' in body) {
+      const tz = body.sms_timezone
+      if (typeof tz !== 'string' || !tz.trim()) {
+        return NextResponse.json(
+          { error: 'sms_timezone must be a non-empty IANA timezone name' },
+          { status: 400 }
+        )
+      }
+      try {
+        new Intl.DateTimeFormat('en-US', { timeZone: tz })
+      } catch {
+        return NextResponse.json(
+          { error: `Unknown timezone: ${tz}` },
+          { status: 400 }
+        )
+      }
+      update.sms_timezone = tz
+    }
+    if ('a2p_brand_id' in body) {
+      update.a2p_brand_id = body.a2p_brand_id || null
+    }
+    if ('a2p_campaign_id' in body) {
+      update.a2p_campaign_id = body.a2p_campaign_id || null
+    }
+    if ('a2p_status' in body) {
+      if (!A2P_STATUSES.includes(body.a2p_status)) {
+        return NextResponse.json(
+          { error: `a2p_status must be one of: ${A2P_STATUSES.join(', ')}` },
+          { status: 400 }
+        )
+      }
+      update.a2p_status = body.a2p_status
+    }
+
+    if (Object.keys(update).length === 0) {
+      return NextResponse.json(
+        { error: 'No updatable fields supplied' },
+        { status: 400 }
+      )
+    }
+    update.updated_at = new Date().toISOString()
+
+    const { data: updated, error: updateError } = await supabase
+      .from('whatsapp_config')
+      .update(update)
+      .eq('user_id', user.id)
+      .select('id')
+      .maybeSingle()
+
+    if (updateError) {
+      console.error('Error patching whatsapp_config:', updateError)
+      return NextResponse.json(
+        { error: 'Failed to update configuration' },
+        { status: 500 }
+      )
+    }
+    if (!updated) {
+      return NextResponse.json(
+        { error: 'No configuration to update — save your gateway connection first' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error in WhatsApp config PATCH:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+/**
  * DELETE /api/whatsapp/config
  *
  * Removes the authenticated user's WhatsApp configuration row. Used by

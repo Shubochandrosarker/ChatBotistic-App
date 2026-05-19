@@ -115,6 +115,13 @@ export interface WhatsAppConfig {
   jasmin_username?: string;
   jasmin_password?: string;
   jasmin_default_sender?: string;
+  // SMS compliance + A2P/TCR registration (SMS gateway provider).
+  sms_quiet_hours_start?: number | null;
+  sms_quiet_hours_end?: number | null;
+  sms_timezone?: string;
+  a2p_brand_id?: string;
+  a2p_campaign_id?: string;
+  a2p_status?: 'unregistered' | 'pending' | 'registered' | 'rejected';
   status: 'connected' | 'disconnected';
   connected_at?: string;
 }

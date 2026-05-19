@@ -69,6 +69,15 @@ export function WhatsAppConfig() {
   const [jasminPassword, setJasminPassword] = useState('');
   const [jasminDefaultSender, setJasminDefaultSender] = useState('');
 
+  // SMS compliance + A2P/TCR registration (SMS gateway provider)
+  const [smsQuietStart, setSmsQuietStart] = useState('');
+  const [smsQuietEnd, setSmsQuietEnd] = useState('');
+  const [smsTimezone, setSmsTimezone] = useState('America/New_York');
+  const [a2pBrandId, setA2pBrandId] = useState('');
+  const [a2pCampaignId, setA2pCampaignId] = useState('');
+  const [a2pStatus, setA2pStatus] = useState('unregistered');
+  const [savingCompliance, setSavingCompliance] = useState(false);
+
   // True once the user has typed into the masked secret field, meaning a
   // fresh secret is available to send (the API needs it to re-verify).
   const [tokenEdited, setTokenEdited] = useState(false);
@@ -111,6 +120,20 @@ export function WhatsAppConfig() {
           setJasminUsername(data.jasmin_username || '');
           setJasminPassword(data.jasmin_password ? MASKED_TOKEN : '');
           setJasminDefaultSender(data.jasmin_default_sender || '');
+          setSmsQuietStart(
+            data.sms_quiet_hours_start != null
+              ? String(data.sms_quiet_hours_start)
+              : ''
+          );
+          setSmsQuietEnd(
+            data.sms_quiet_hours_end != null
+              ? String(data.sms_quiet_hours_end)
+              : ''
+          );
+          setSmsTimezone(data.sms_timezone || 'America/New_York');
+          setA2pBrandId(data.a2p_brand_id || '');
+          setA2pCampaignId(data.a2p_campaign_id || '');
+          setA2pStatus(data.a2p_status || 'unregistered');
           setTokenEdited(false);
         } else {
           setConfig(null);
@@ -126,6 +149,12 @@ export function WhatsAppConfig() {
           setJasminUsername('');
           setJasminPassword('');
           setJasminDefaultSender('');
+          setSmsQuietStart('');
+          setSmsQuietEnd('');
+          setSmsTimezone('America/New_York');
+          setA2pBrandId('');
+          setA2pCampaignId('');
+          setA2pStatus('unregistered');
           setTokenEdited(false);
         }
 
@@ -354,6 +383,52 @@ export function WhatsAppConfig() {
   function handleCopyWebhookUrl() {
     navigator.clipboard.writeText(webhookUrl);
     toast.success('Webhook URL copied to clipboard');
+  }
+
+  async function handleSaveCompliance() {
+    const parseHour = (s: string): number | null | typeof NaN => {
+      if (s.trim() === '') return null;
+      const n = Number(s);
+      return Number.isInteger(n) && n >= 0 && n <= 23 ? n : NaN;
+    };
+    const start = parseHour(smsQuietStart);
+    const end = parseHour(smsQuietEnd);
+    if (Number.isNaN(start) || Number.isNaN(end)) {
+      toast.error('Quiet hours must be whole numbers from 0 to 23');
+      return;
+    }
+    if ((start === null) !== (end === null)) {
+      toast.error('Set both quiet-hour fields, or leave both empty');
+      return;
+    }
+
+    try {
+      setSavingCompliance(true);
+      const res = await fetch('/api/whatsapp/config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sms_quiet_hours_start: start,
+          sms_quiet_hours_end: end,
+          sms_timezone: smsTimezone.trim() || 'America/New_York',
+          a2p_brand_id: a2pBrandId.trim(),
+          a2p_campaign_id: a2pCampaignId.trim(),
+          a2p_status: a2pStatus,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to save compliance settings');
+        return;
+      }
+      toast.success('Compliance settings saved');
+      if (user) await fetchConfig(user.id);
+    } catch (err) {
+      console.error('Save compliance error:', err);
+      toast.error('Failed to save compliance settings');
+    } finally {
+      setSavingCompliance(false);
+    }
   }
 
   if (loading) {
@@ -778,6 +853,119 @@ export function WhatsAppConfig() {
             </div>
           </CardContent>
         </Card>
+
+        {/* SMS Compliance & Registration — SMS gateway provider only */}
+        {provider === 'jasmin' && (
+          <Card className="bg-card border-border ring-0 ring-transparent">
+            <CardHeader>
+              <CardTitle className="text-foreground">
+                SMS Compliance &amp; Registration
+              </CardTitle>
+              <CardDescription className="text-muted-foreground">
+                Quiet hours and A2P/TCR registration state. Outbound SMS is
+                blocked during quiet hours and to contacts without recorded
+                consent.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!config && (
+                <p className="text-xs text-muted-foreground">
+                  Save your gateway connection above before configuring
+                  compliance settings.
+                </p>
+              )}
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label className="text-foreground">Quiet Hours Start</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={23}
+                    placeholder="e.g. 21"
+                    value={smsQuietStart}
+                    onChange={(e) => setSmsQuietStart(e.target.value)}
+                    className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-foreground">Quiet Hours End</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={23}
+                    placeholder="e.g. 8"
+                    value={smsQuietEnd}
+                    onChange={(e) => setSmsQuietEnd(e.target.value)}
+                    className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-foreground">Timezone</Label>
+                  <Input
+                    placeholder="America/New_York"
+                    value={smsTimezone}
+                    onChange={(e) => setSmsTimezone(e.target.value)}
+                    className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Hours are 0–23 in the timezone above. Leave both blank to
+                disable the quiet-hours check.
+              </p>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-foreground">A2P Brand ID</Label>
+                  <Input
+                    placeholder="TCR brand ID"
+                    value={a2pBrandId}
+                    onChange={(e) => setA2pBrandId(e.target.value)}
+                    className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-foreground">A2P Campaign ID</Label>
+                  <Input
+                    placeholder="TCR campaign ID"
+                    value={a2pCampaignId}
+                    onChange={(e) => setA2pCampaignId(e.target.value)}
+                    className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-foreground">Registration Status</Label>
+                <select
+                  value={a2pStatus}
+                  onChange={(e) => setA2pStatus(e.target.value)}
+                  className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground"
+                >
+                  <option value="unregistered">Unregistered</option>
+                  <option value="pending">Pending</option>
+                  <option value="registered">Registered</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+
+              <Button
+                onClick={handleSaveCompliance}
+                disabled={savingCompliance || !config}
+                className="bg-primary hover:bg-primary text-primary-foreground"
+              >
+                {savingCompliance ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Compliance Settings'
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-3">
