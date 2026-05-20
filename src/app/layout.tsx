@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Sora } from "next/font/google";
 import { AppToaster } from "@/components/app-toaster";
 import { ThemeProvider, themeInitScript } from "@/components/theme-provider";
 import "./globals.css";
@@ -7,6 +7,14 @@ import "./globals.css";
 const inter = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
+});
+
+// Dedicated display face for headings — gives titles their own
+// character instead of reusing the body sans.
+const sora = Sora({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -44,7 +52,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} h-full antialiased`}
+      className={`${inter.variable} ${sora.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { sendTemplateMessage } from '@/lib/whatsapp/meta-api'
-import { decrypt } from '@/lib/whatsapp/encryption'
+import { providerFromConfigRow } from '@/lib/whatsapp/load-provider'
 import {
   sanitizePhoneForMeta,
   isValidE164,
@@ -13,6 +12,11 @@ import {
   rateLimitResponse,
   RATE_LIMITS,
 } from '@/lib/rate-limit'
+import {
+  isSendAllowed,
+  isWithinQuietHours,
+  logSms,
+} from '@/lib/sms/compliance'
 
 interface BroadcastResult {
   phone: string
@@ -22,30 +26,32 @@ interface BroadcastResult {
 }
 
 /**
- * Two input shapes are accepted:
+ * Fan-out endpoint for broadcasts. Provider-aware:
  *
- *   NEW (preferred — supports per-recipient variable substitution):
- *     {
- *       recipients: Array<{ phone: string; params: string[] }>,
- *       template_name, template_language
- *     }
+ *   - meta / twilio  → sends the WhatsApp template `template_name`
+ *                      with per-recipient `params`.
+ *   - jasmin (SMS)   → sends free-form `message_text`, substituting
+ *                      {{1}}, {{2}}, … from per-recipient `params`.
+ *                      Each recipient is consent-checked first and the
+ *                      whole call is blocked during quiet hours; every
+ *                      send is written to the SMS audit log.
  *
- *   LEGACY (all phones receive the same params — kept so existing
- *   callers don't break):
- *     {
- *       phone_numbers: string[],
- *       template_params: string[],
- *       template_name, template_language
- *     }
- *
- * Previous implementation only supported the legacy shape, and the
- * sending hook was forced to ship every batch with `templateParams[0]`
- * — meaning every recipient got contact-0's personalization. The new
- * shape is what actually fixes that.
+ * Input shapes (both accepted):
+ *   NEW:    { recipients: [{ phone, params?, contact_id? }], ... }
+ *   LEGACY: { phone_numbers: string[], template_params?: string[], ... }
  */
 interface NewRecipient {
   phone: string
   params?: string[]
+  contact_id?: string
+}
+
+/** Replace {{1}}, {{2}}, … in an SMS body with positional params. */
+function renderSmsBody(text: string, params: string[]): string {
+  return text.replace(/\{\{\s*(\d+)\s*\}\}/g, (_, n) => {
+    const idx = Number(n) - 1
+    return params[idx] ?? ''
+  })
 }
 
 export async function POST(request: Request) {
@@ -61,9 +67,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Per-user broadcast budget. Note: this limits how often a user
-    // can *start* a campaign, not how many messages go out inside
-    // one — the fan-out loop below runs without additional gating.
+    // Per-user budget on *starting* a campaign (not messages within one).
     const limit = checkRateLimit(`broadcast:${user.id}`, RATE_LIMITS.broadcast)
     if (!limit.success) {
       return rateLimitResponse(limit)
@@ -76,9 +80,9 @@ export async function POST(request: Request) {
       template_name,
       template_language,
       template_params,
+      message_text,
     } = body
 
-    // Normalize to a list of {phone, params} regardless of shape.
     let recipients: NewRecipient[]
     if (Array.isArray(newRecipients) && newRecipients.length > 0) {
       recipients = newRecipients
@@ -100,13 +104,6 @@ export async function POST(request: Request) {
       )
     }
 
-    if (!template_name) {
-      return NextResponse.json(
-        { error: 'template_name is required' },
-        { status: 400 }
-      )
-    }
-
     const { data: config, error: configError } = await supabase
       .from('whatsapp_config')
       .select('*')
@@ -117,13 +114,43 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            'WhatsApp not configured. Please set up your WhatsApp integration first.',
+            'Messaging is not configured. Please set up your messaging integration first.',
         },
         { status: 400 }
       )
     }
 
-    const accessToken = decrypt(config.access_token)
+    let provider
+    try {
+      provider = providerFromConfigRow(config)
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Invalid messaging configuration'
+      return NextResponse.json({ error: message }, { status: 400 })
+    }
+
+    const isSms = provider.name === 'jasmin'
+
+    if (isSms) {
+      if (!message_text || typeof message_text !== 'string') {
+        return NextResponse.json(
+          { error: 'message_text is required for an SMS broadcast' },
+          { status: 400 }
+        )
+      }
+      // Quiet hours gate the entire campaign — fail fast.
+      if (isWithinQuietHours(config)) {
+        return NextResponse.json(
+          { error: 'SMS broadcast blocked: outside the allowed sending hours' },
+          { status: 403 }
+        )
+      }
+    } else if (!template_name) {
+      return NextResponse.json(
+        { error: 'template_name is required' },
+        { status: 400 }
+      )
+    }
 
     const results: BroadcastResult[] = []
     let sentCount = 0
@@ -131,7 +158,6 @@ export async function POST(request: Request) {
 
     for (const recipient of recipients) {
       const sanitized = sanitizePhoneForMeta(recipient.phone)
-
       if (!isValidE164(sanitized)) {
         results.push({
           phone: recipient.phone,
@@ -142,34 +168,65 @@ export async function POST(request: Request) {
         continue
       }
 
-      // Retry with phone variants on "not in allowed list" so numbers
-      // that differ only in a trunk-prefix 0 still reach recipients.
+      // SMS: skip any recipient lacking recorded express consent.
+      if (isSms) {
+        if (!recipient.contact_id) {
+          results.push({
+            phone: recipient.phone,
+            status: 'failed',
+            error: 'Missing contact reference for consent check',
+          })
+          failedCount++
+          continue
+        }
+        const decision = await isSendAllowed(supabase, recipient.contact_id)
+        if (!decision.allowed) {
+          await logSms(supabase, {
+            userId: user.id,
+            contactId: recipient.contact_id,
+            direction: 'outbound',
+            phone: sanitized,
+            body: message_text,
+            status: 'blocked',
+            blockReason: decision.reason,
+          })
+          results.push({
+            phone: recipient.phone,
+            status: 'failed',
+            error: `SMS blocked: ${decision.reason}`,
+          })
+          failedCount++
+          continue
+        }
+      }
+
+      const params = recipient.params ?? []
       const variants = phoneVariants(sanitized)
       let sentMessageId: string | null = null
       let lastError: string | null = null
 
       for (const variant of variants) {
         try {
-          const result = await sendTemplateMessage({
-            phoneNumberId: config.phone_number_id,
-            accessToken,
-            to: variant,
-            templateName: template_name,
-            language: template_language || 'en_US',
-            params: recipient.params ?? [],
-          })
+          const result = isSms
+            ? await provider.sendText({
+                to: variant,
+                text: renderSmsBody(message_text as string, params),
+              })
+            : await provider.sendTemplate({
+                to: variant,
+                templateName: template_name,
+                language: template_language || 'en_US',
+                params,
+              })
           sentMessageId = result.messageId
           lastError = null
           break
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : 'Unknown error'
-          if (!isRecipientNotAllowedError(errorMessage)) {
-            lastError = errorMessage
-            break
-          }
           lastError = errorMessage
-          // retry with next variant
+          // Only "recipient not in allowed list" is worth a variant retry.
+          if (!isRecipientNotAllowedError(errorMessage)) break
         }
       }
 
@@ -180,6 +237,17 @@ export async function POST(request: Request) {
           whatsapp_message_id: sentMessageId,
         })
         sentCount++
+        if (isSms) {
+          await logSms(supabase, {
+            userId: user.id,
+            contactId: recipient.contact_id ?? null,
+            direction: 'outbound',
+            phone: sanitized,
+            body: renderSmsBody(message_text as string, params),
+            messageId: sentMessageId,
+            status: 'sent',
+          })
+        }
       } else {
         console.error(
           `Failed to send broadcast to ${recipient.phone}:`,
@@ -202,7 +270,7 @@ export async function POST(request: Request) {
       results,
     })
   } catch (error) {
-    console.error('Error in WhatsApp broadcast POST:', error)
+    console.error('Error in broadcast POST:', error)
     return NextResponse.json(
       { error: 'Failed to process broadcast' },
       { status: 500 }

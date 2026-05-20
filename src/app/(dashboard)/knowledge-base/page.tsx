@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { EmptyState } from "@/components/dashboard/empty-state"
 import {
   Dialog,
   DialogContent,
@@ -128,15 +129,11 @@ export default function KnowledgeBasePage() {
       )}
 
       {documents.length === 0 ? (
-        <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/40">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
-            <BookOpen className="h-6 w-6 text-emerald-500" />
-          </div>
-          <p className="mt-3 text-sm font-medium text-foreground">No documents yet</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Add your first document so the AI chatbot has something to answer from.
-          </p>
-        </div>
+        <EmptyState
+          icon={BookOpen}
+          title="No documents yet"
+          hint="Add your first document so the AI chatbot has something to answer from."
+        />
       ) : (
         <ul className="space-y-3">
           {documents.map((doc) => (

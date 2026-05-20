@@ -1,0 +1,65 @@
+name: Build deployment artifact
+
+# Manual-trigger build that produces the exact files to upload to
+# Hostinger's hPanel Node.js app. Run it from the Actions tab
+# (Run workflow) whenever you want a fresh deployable build.
+#
+# Why this exists:
+#   - NEXT_PUBLIC_* vars are inlined into the browser bundle at BUILD
+#     time. Building without them ships a broken app. This workflow
+#     builds with your real values from repository secrets.
+#   - It uploads the whole standalone output as ONE downloadable
+#     artifact, so you upload a single zip to Hostinger instead of
+#     thousands of node_modules files (which fails mid-upload in the
+#     hPanel File Manager).
+#
+# One-time setup — add these in:
+#   GitHub repo → Settings → Secrets and variables → Actions → New secret
+#     NEXT_PUBLIC_SUPABASE_URL       (Supabase → Project Settings → API)
+#     NEXT_PUBLIC_SUPABASE_ANON_KEY  (Supabase → Project Settings → API)
+#     NEXT_PUBLIC_SITE_URL           (optional — defaults to the subdomain)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build standalone bundle
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL || 'https://crm.wpistic.com' }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Verify build-time secrets are set
+        run: |
+          if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] || [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ]; then
+            echo "::error::Missing NEXT_PUBLIC_SUPABASE_URL and/or NEXT_PUBLIC_SUPABASE_ANON_KEY."
+            echo "::error::Add them under repo Settings → Secrets and variables → Actions, then re-run."
+            exit 1
+          fi
+          echo "Build secrets present — building against ${NEXT_PUBLIC_SUPABASE_URL}"
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (standalone output)
+        run: npm run build
+
+      - name: Upload deployable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          # Downloaded zip contains server.js, node_modules/, public/,
+          # and .next/ at its root — upload its CONTENTS to the hPanel
+          # Application root.
+          name: crm-standalone
+          path: .next/standalone
+          retention-days: 7
+          if-no-files-found: error
