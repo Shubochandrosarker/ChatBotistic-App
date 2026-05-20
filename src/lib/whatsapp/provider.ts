@@ -10,8 +10,9 @@
 
 import { MetaProvider } from './meta-provider'
 import { TwilioProvider } from './twilio-provider'
+import { JasminProvider } from './jasmin-provider'
 
-export type WhatsAppProviderName = 'meta' | 'twilio'
+export type WhatsAppProviderName = 'meta' | 'twilio' | 'jasmin'
 
 export interface SendTextOptions {
   to: string
@@ -67,6 +68,15 @@ export type WhatsAppProviderConfig =
       whatsappNumber: string
       messagingServiceSid?: string
     }
+  | {
+      provider: 'jasmin'
+      /** Base URL of the self-hosted Jasmin gateway's HTTP API. */
+      baseUrl: string
+      username: string
+      password: string
+      /** Sender ID / number SMS is sent from. */
+      defaultSender: string
+    }
 
 export function createWhatsAppProvider(
   config: WhatsAppProviderConfig,
@@ -80,6 +90,13 @@ export function createWhatsAppProvider(
         config.authToken,
         config.whatsappNumber,
         config.messagingServiceSid,
+      )
+    case 'jasmin':
+      return new JasminProvider(
+        config.baseUrl,
+        config.username,
+        config.password,
+        config.defaultSender,
       )
     default: {
       const _exhaustive: never = config

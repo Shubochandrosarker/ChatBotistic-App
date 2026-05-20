@@ -13,6 +13,11 @@ import {
   rateLimitResponse,
   RATE_LIMITS,
 } from '@/lib/rate-limit'
+import {
+  isSendAllowed,
+  isWithinQuietHours,
+  logSms,
+} from '@/lib/sms/compliance'
 
 export async function POST(request: Request) {
   try {
@@ -124,6 +129,45 @@ export async function POST(request: Request) {
         err instanceof Error ? err.message : 'Invalid WhatsApp configuration'
       console.error('[whatsapp/send] provider resolution failed:', message)
       return NextResponse.json({ error: message }, { status: 400 })
+    }
+
+    // SMS compliance gate. Only the self-hosted SMS gateway is subject
+    // to TCPA / carrier opt-in rules here — the WhatsApp providers have
+    // their own consent model enforced by Meta.
+    if (provider.name === 'jasmin') {
+      const decision = await isSendAllowed(supabase, contact.id)
+      if (!decision.allowed) {
+        await logSms(supabase, {
+          userId: user.id,
+          contactId: contact.id,
+          conversationId: conversation_id,
+          direction: 'outbound',
+          phone: sanitizedPhone,
+          body: content_text ?? null,
+          status: 'blocked',
+          blockReason: decision.reason,
+        })
+        return NextResponse.json(
+          { error: `SMS blocked: ${decision.reason}` },
+          { status: 403 }
+        )
+      }
+      if (isWithinQuietHours(config)) {
+        await logSms(supabase, {
+          userId: user.id,
+          contactId: contact.id,
+          conversationId: conversation_id,
+          direction: 'outbound',
+          phone: sanitizedPhone,
+          body: content_text ?? null,
+          status: 'blocked',
+          blockReason: 'quiet hours',
+        })
+        return NextResponse.json(
+          { error: 'SMS blocked: outside the allowed sending hours' },
+          { status: 403 }
+        )
+      }
     }
 
     // Self-heal legacy CBC-encrypted Meta tokens. Fire-and-forget: a
@@ -249,6 +293,20 @@ export async function POST(request: Request) {
         { error: `Message sent to Meta but failed to save to DB: ${msgError.message}` },
         { status: 500 }
       )
+    }
+
+    // Audit-log every outbound SMS for TCPA dispute resolution.
+    if (provider.name === 'jasmin') {
+      await logSms(supabase, {
+        userId: user.id,
+        contactId: contact.id,
+        conversationId: conversation_id,
+        direction: 'outbound',
+        phone: workingPhone,
+        body: content_text ?? null,
+        messageId: waMessageId,
+        status: 'sent',
+      })
     }
 
     // Update conversation

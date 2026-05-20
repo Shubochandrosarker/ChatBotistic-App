@@ -35,7 +35,12 @@ export type VariableMapping =
 
 interface BroadcastPayload {
   name: string;
-  template: MessageTemplate;
+  /** 'whatsapp' (default) sends a template; 'sms' sends free-form text. */
+  mode?: 'whatsapp' | 'sms';
+  /** Required for 'whatsapp' mode. */
+  template?: MessageTemplate;
+  /** Required for 'sms' mode — the SMS body. */
+  messageText?: string;
   audience: AudienceConfig;
   variables: Record<string, VariableMapping>;
 }
@@ -312,8 +317,15 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
     setProgress(0);
 
     const supabase = createClient();
+    const isSms = payload.mode === 'sms';
 
     try {
+      if (isSms && !payload.messageText?.trim()) {
+        throw new Error('Enter a message before sending.');
+      }
+      if (!isSms && !payload.template) {
+        throw new Error('Choose a template before sending.');
+      }
       // ── Step 0: Resolve current user ──────────────────────────────
       // broadcasts.user_id is NOT NULL + guarded by RLS
       // (auth.uid() = user_id). Without this, the INSERT below was
@@ -342,9 +354,12 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         .insert({
           user_id: user.id,
           name: payload.name,
-          template_name: payload.template.name,
-          template_language: payload.template.language ?? 'en_US',
-          template_variables: payload.variables,
+          template_name: isSms ? null : payload.template!.name,
+          template_language: isSms
+            ? 'en_US'
+            : (payload.template!.language ?? 'en_US'),
+          template_variables: isSms ? null : payload.variables,
+          message_text: isSms ? payload.messageText!.trim() : null,
           audience_filter: {
             type: payload.audience.type,
             tagIds: payload.audience.tagIds,
@@ -431,13 +446,14 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
           .filter((r) => r.contact?.phone)
           .map((r) => ({
             phone: r.contact!.phone as string,
-            params: r.contact
-              ? resolveVariables(
+            contact_id: r.contact!.id,
+            params: isSms
+              ? []
+              : resolveVariables(
                   payload.variables,
-                  r.contact,
-                  customValueIndex.get(r.contact.id),
-                )
-              : [],
+                  r.contact!,
+                  customValueIndex.get(r.contact!.id),
+                ),
           }));
 
         if (apiRecipients.length === 0) continue;
@@ -446,11 +462,18 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
           const res = await fetch('/api/whatsapp/broadcast', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              recipients: apiRecipients,
-              template_name: payload.template.name,
-              template_language: payload.template.language ?? 'en_US',
-            }),
+            body: JSON.stringify(
+              isSms
+                ? {
+                    recipients: apiRecipients,
+                    message_text: payload.messageText!.trim(),
+                  }
+                : {
+                    recipients: apiRecipients,
+                    template_name: payload.template!.name,
+                    template_language: payload.template!.language ?? 'en_US',
+                  },
+            ),
           });
 
           const data = await res.json();

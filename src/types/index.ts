@@ -92,7 +92,7 @@ export interface Message {
   created_at: string;
 }
 
-export type WhatsAppProviderName = 'meta' | 'twilio';
+export type WhatsAppProviderName = 'meta' | 'twilio' | 'jasmin';
 
 export interface WhatsAppConfig {
   id: string;
@@ -110,6 +110,20 @@ export interface WhatsAppConfig {
   twilio_auth_token?: string;
   twilio_whatsapp_number?: string;
   twilio_messaging_service_sid?: string;
+  // Self-hosted SMS gateway (Jasmin) fields — nullable for other providers.
+  jasmin_base_url?: string;
+  jasmin_username?: string;
+  jasmin_password?: string;
+  jasmin_default_sender?: string;
+  // SMS compliance + A2P/TCR registration (SMS gateway provider).
+  sms_quiet_hours_start?: number | null;
+  sms_quiet_hours_end?: number | null;
+  sms_timezone?: string;
+  a2p_brand_id?: string;
+  a2p_campaign_id?: string;
+  a2p_status?: 'unregistered' | 'pending' | 'registered' | 'rejected';
+  /** Public key for the hosted SMS consent-capture form. */
+  sms_widget_key?: string;
   status: 'connected' | 'disconnected';
   connected_at?: string;
 }

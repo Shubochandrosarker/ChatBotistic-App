@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -10,7 +10,7 @@ import { Step2SelectAudience } from '@/components/broadcasts/step2-select-audien
 import { Step3Personalize } from '@/components/broadcasts/step3-personalize';
 import { Step4ScheduleSend } from '@/components/broadcasts/step4-schedule-send';
 import { useBroadcastSending } from '@/hooks/use-broadcast-sending';
-import { Check } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 
 const steps = [
   { label: 'Template', key: 'template' },
@@ -40,6 +40,38 @@ export default function NewBroadcastPage() {
     Record<string, { type: 'static' | 'field' | 'custom_field'; value: string }>
   >({});
   const [name, setName] = useState('');
+  const [providerChecked, setProviderChecked] = useState(false);
+
+  // SMS-gateway orgs use the dedicated SMS broadcast flow — the
+  // template wizard below is WhatsApp-only.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const supabase = createClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const uid = session?.user?.id;
+        if (uid) {
+          const { data } = await supabase
+            .from('whatsapp_config')
+            .select('provider')
+            .eq('user_id', uid)
+            .maybeSingle();
+          if (data?.provider === 'jasmin') {
+            router.replace('/broadcasts/new-sms');
+            return;
+          }
+        }
+      } finally {
+        if (active) setProviderChecked(true);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   async function handleSend() {
     if (!template) return;
@@ -116,6 +148,14 @@ export default function NewBroadcastPage() {
     }
     toast.success('Draft saved');
     router.push('/broadcasts');
+  }
+
+  if (!providerChecked) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="size-6 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (

@@ -10,13 +10,17 @@ import { createWhatsAppProvider, type WhatsAppProvider } from './provider'
 
 /** Shape of a `whatsapp_config` row, as selected by the API routes. */
 export interface WhatsAppConfigRow {
-  provider?: 'meta' | 'twilio' | null
+  provider?: 'meta' | 'twilio' | 'jasmin' | null
   phone_number_id?: string | null
   access_token?: string | null
   twilio_account_sid?: string | null
   twilio_auth_token?: string | null
   twilio_whatsapp_number?: string | null
   twilio_messaging_service_sid?: string | null
+  jasmin_base_url?: string | null
+  jasmin_username?: string | null
+  jasmin_password?: string | null
+  jasmin_default_sender?: string | null
 }
 
 /**
@@ -42,6 +46,21 @@ export function providerFromConfigRow(
       authToken: decrypt(row.twilio_auth_token),
       whatsappNumber: row.twilio_whatsapp_number ?? '',
       messagingServiceSid: row.twilio_messaging_service_sid ?? undefined,
+    })
+  }
+
+  if (provider === 'jasmin') {
+    if (!row.jasmin_base_url || !row.jasmin_username || !row.jasmin_password) {
+      throw new Error(
+        'SMS gateway configuration is incomplete (missing gateway URL, username, or password)',
+      )
+    }
+    return createWhatsAppProvider({
+      provider: 'jasmin',
+      baseUrl: row.jasmin_base_url,
+      username: row.jasmin_username,
+      password: decrypt(row.jasmin_password),
+      defaultSender: row.jasmin_default_sender ?? '',
     })
   }
 
