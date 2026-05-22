@@ -9,12 +9,6 @@ let browserClient: SupabaseClient | undefined
 export function createClient() {
   if (browserClient) return browserClient
 
-<<<<<<< HEAD
-  browserClient = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-=======
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -36,7 +30,6 @@ export function createClient() {
   }
 
   browserClient = createBrowserClient(url, key)
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 
   return browserClient
 }

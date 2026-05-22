@@ -2,10 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
-<<<<<<< HEAD
-=======
 import { normalizePhone } from '@/lib/whatsapp/phone-utils';
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -142,10 +139,7 @@ export function ImportModal({ open, onOpenChange, onImported }: ImportModalProps
         const rows = chunk.map((row) => ({
           user_id: user.id,
           phone: row.phone,
-<<<<<<< HEAD
-=======
           phone_normalized: normalizePhone(row.phone),
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
           name: row.name || null,
           email: row.email || null,
           company: row.company || null,

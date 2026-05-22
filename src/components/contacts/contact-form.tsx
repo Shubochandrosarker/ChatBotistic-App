@@ -2,10 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-<<<<<<< HEAD
-=======
 import { normalizePhone } from '@/lib/whatsapp/phone-utils';
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 import { toast } from 'sonner';
 import type { Contact, Tag, ContactTag } from '@/types';
 import {
@@ -104,10 +101,7 @@ export function ContactForm({
           .update({
             name: name.trim() || null,
             phone: phone.trim(),
-<<<<<<< HEAD
-=======
             phone_normalized: normalizePhone(phone.trim()),
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
             email: email.trim() || null,
             company: company.trim() || null,
             updated_at: new Date().toISOString(),
@@ -121,10 +115,7 @@ export function ContactForm({
             user_id: user.id,
             name: name.trim() || null,
             phone: phone.trim(),
-<<<<<<< HEAD
-=======
             phone_normalized: normalizePhone(phone.trim()),
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
             email: email.trim() || null,
             company: company.trim() || null,
           })

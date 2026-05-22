@@ -55,11 +55,8 @@
    white cards, violet primary.
    --------------------------------------------------------------- */
 :root {
-<<<<<<< HEAD
-=======
   --font-sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --font-display: "Trebuchet MS", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
   --background: oklch(0.97 0.008 286);
   --foreground: oklch(0.21 0.02 280);
   --card: oklch(1 0 0);

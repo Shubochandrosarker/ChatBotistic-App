@@ -9,11 +9,7 @@
  *   GET  /api/sms/consent?contact_id=...   → current consent record
  *   POST /api/sms/consent                  → record opt-in / opt-out
  *        body: { contact_id, status: 'opted_in' | 'opted_out',
-<<<<<<< HEAD
- *                source?, age_confirmed? }
-=======
  *                source?, age_confirmed?, legal_text_version? }
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
  */
 
 import { NextResponse } from 'next/server'
@@ -65,11 +61,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-<<<<<<< HEAD
-    const { contact_id, status, source, age_confirmed } = body
-=======
     const { contact_id, status, source, age_confirmed, legal_text_version } = body
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 
     const auth = await authedUserAndContact(request, contact_id)
     if ('error' in auth) {
@@ -84,16 +76,6 @@ export async function POST(request: Request) {
     }
 
     if (status === 'opted_out') {
-<<<<<<< HEAD
-      await setOptOut(auth.supabase, auth.userId, contact_id)
-    } else {
-      const ip =
-        request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null
-      await setOptIn(auth.supabase, auth.userId, contact_id, {
-        source: typeof source === 'string' ? source : 'web_form',
-        ip: ip ?? undefined,
-        ageConfirmed: age_confirmed === true,
-=======
       const ip =
         request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null
       const userAgent = request.headers.get('user-agent')
@@ -113,7 +95,6 @@ export async function POST(request: Request) {
         ageConfirmed: age_confirmed === true,
         legalTextVersion:
           typeof legal_text_version === 'string' ? legal_text_version : undefined,
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
       })
     }
 

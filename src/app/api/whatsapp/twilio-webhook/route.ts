@@ -306,8 +306,6 @@ async function findOrCreateContact(
   phone: string,
   name: string
 ): Promise<{ id: string; unread_count?: number; wasCreated: boolean } | null> {
-<<<<<<< HEAD
-=======
   const { data: exact, error: exactError } = await supabaseAdmin()
     .from('contacts')
     .select('*')
@@ -328,15 +326,11 @@ async function findOrCreateContact(
     return { ...exact, wasCreated: false }
   }
 
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
   const { data: contacts, error } = await supabaseAdmin()
     .from('contacts')
     .select('*')
     .eq('user_id', userId)
-<<<<<<< HEAD
-=======
     .is('phone_normalized', null)
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
   if (error) {
     console.error('[twilio-webhook] contact fetch failed:', error)
     return null
@@ -356,11 +350,7 @@ async function findOrCreateContact(
 
   const { data: created, error: createError } = await supabaseAdmin()
     .from('contacts')
-<<<<<<< HEAD
-    .insert({ user_id: userId, phone, name: name || phone })
-=======
     .insert({ user_id: userId, phone, phone_normalized: phone, name: name || phone })
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
     .select()
     .single()
   if (createError) {
@@ -383,14 +373,6 @@ async function findOrCreateConversation(userId: string, contactId: string) {
     .from('conversations')
     .insert({ user_id: userId, contact_id: contactId })
     .select()
-<<<<<<< HEAD
-    .single()
-  if (createError) {
-    console.error('[twilio-webhook] conversation create failed:', createError)
-    return null
-  }
-  return created
-=======
     .maybeSingle()
   if (!createError && created) return created
 
@@ -414,7 +396,6 @@ async function findOrCreateConversation(userId: string, contactId: string) {
     return null
   }
   return retry
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 }
 
 /**

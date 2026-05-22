@@ -61,10 +61,7 @@ export interface ConsentRow {
   id: string
   status: 'pending' | 'opted_in' | 'opted_out'
   age_confirmed: boolean
-<<<<<<< HEAD
-=======
   legal_text_version?: string | null
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 }
 
 export async function getConsent(
@@ -73,11 +70,7 @@ export async function getConsent(
 ): Promise<ConsentRow | null> {
   const { data } = await db
     .from('sms_consent')
-<<<<<<< HEAD
-    .select('id, status, age_confirmed')
-=======
     .select('id, status, age_confirmed, legal_text_version')
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
     .eq('contact_id', contactId)
     .maybeSingle()
   return (data as ConsentRow | null) ?? null
@@ -114,9 +107,6 @@ export async function isSendAllowed(
 export async function setOptOut(
   db: Db,
   userId: string,
-<<<<<<< HEAD
-  contactId: string
-=======
   contactId: string,
   opts: {
     source?: string
@@ -124,7 +114,6 @@ export async function setOptOut(
     userAgent?: string
     details?: Record<string, unknown>
   } = {}
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 ): Promise<void> {
   const now = new Date().toISOString()
   await db.from('sms_consent').upsert(
@@ -132,17 +121,12 @@ export async function setOptOut(
       user_id: userId,
       contact_id: contactId,
       status: 'opted_out',
-<<<<<<< HEAD
-=======
       opt_out_source: opts.source ?? 'keyword',
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
       opted_out_at: now,
       updated_at: now,
     },
     { onConflict: 'contact_id' }
   )
-<<<<<<< HEAD
-=======
   await logConsentEvent(db, {
     userId,
     contactId,
@@ -152,7 +136,6 @@ export async function setOptOut(
     userAgent: opts.userAgent,
     details: opts.details,
   })
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 }
 
 /** Mark a contact opted in. Used by the consent API and the START keyword. */
@@ -160,9 +143,6 @@ export async function setOptIn(
   db: Db,
   userId: string,
   contactId: string,
-<<<<<<< HEAD
-  opts: { source?: string; ip?: string; ageConfirmed?: boolean } = {}
-=======
   opts: {
     source?: string
     ip?: string
@@ -171,7 +151,6 @@ export async function setOptIn(
     legalTextVersion?: string
     details?: Record<string, unknown>
   } = {}
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 ): Promise<void> {
   const now = new Date().toISOString()
   await db.from('sms_consent').upsert(
@@ -182,22 +161,15 @@ export async function setOptIn(
       opted_in_at: now,
       opt_in_source: opts.source ?? 'keyword',
       opt_in_ip: opts.ip ?? null,
-<<<<<<< HEAD
-      age_confirmed: opts.ageConfirmed ?? false,
-      opted_out_at: null,
-=======
       opt_in_user_agent: opts.userAgent ?? null,
       legal_text_version: opts.legalTextVersion ?? null,
       age_confirmed: opts.ageConfirmed ?? false,
       opted_out_at: null,
       opt_out_source: null,
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
       updated_at: now,
     },
     { onConflict: 'contact_id' }
   )
-<<<<<<< HEAD
-=======
   await logConsentEvent(db, {
     userId,
     contactId,
@@ -265,7 +237,6 @@ export function evaluateSmsPolicy(input: SmsPolicyInput): SmsPolicyDecision {
     reasons,
     messageCategory: input.messageCategory,
   }
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 }
 
 interface QuietHoursConfig {
@@ -321,8 +292,6 @@ export interface SmsAuditEntry {
   blockReason?: string | null
 }
 
-<<<<<<< HEAD
-=======
 export interface SmsConsentEvent {
   userId: string
   contactId: string
@@ -355,7 +324,6 @@ export async function logConsentEvent(
   }
 }
 
->>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 /** Append a row to the SMS audit log. Best-effort — never throws. */
 export async function logSms(db: Db, entry: SmsAuditEntry): Promise<void> {
   try {
