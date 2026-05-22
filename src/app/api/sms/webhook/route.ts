@@ -24,6 +24,10 @@ import { providerFromConfigRow } from '@/lib/whatsapp/load-provider'
 import { runAutomationsForTrigger } from '@/lib/automations/engine'
 import {
   classifyKeyword,
+<<<<<<< HEAD
+=======
+  logConsentEvent,
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
   setOptOut,
   setOptIn,
   logSms,
@@ -57,12 +61,21 @@ async function collectParams(request: Request): Promise<Record<string, string>> 
   return params
 }
 
+<<<<<<< HEAD
 function authorized(params: Record<string, string>): boolean {
+=======
+function authorized(params: Record<string, string>, request: Request): boolean {
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
   const secret = process.env.SMS_WEBHOOK_SECRET
   if (!secret) {
     console.error('[sms-webhook] SMS_WEBHOOK_SECRET is not set — rejecting')
     return false
   }
+<<<<<<< HEAD
+=======
+  const headerSecret = request.headers.get('x-sms-webhook-secret')
+  if (headerSecret && headerSecret === secret) return true
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
   return params.token === secret
 }
 
@@ -77,7 +90,11 @@ export async function POST(request: Request) {
 async function handle(request: Request) {
   const params = await collectParams(request)
 
+<<<<<<< HEAD
   if (!authorized(params)) {
+=======
+  if (!authorized(params, request)) {
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -237,12 +254,38 @@ async function handleInboundMessage(params: Record<string, string>) {
   // Honor carrier opt-out / opt-in / help keywords before anything else.
   const keyword = classifyKeyword(content)
   if (keyword === 'stop') {
+<<<<<<< HEAD
     await setOptOut(supabaseAdmin(), userId, contact.id)
     await sendAutoReply(config, senderPhone, STOP_CONFIRM_MESSAGE)
   } else if (keyword === 'start') {
     await setOptIn(supabaseAdmin(), userId, contact.id, { source: 'keyword' })
     await sendAutoReply(config, senderPhone, START_CONFIRM_MESSAGE)
   } else if (keyword === 'help') {
+=======
+    await setOptOut(supabaseAdmin(), userId, contact.id, {
+      source: 'keyword',
+      userAgent: 'jasmin-webhook',
+      details: { keyword: 'STOP' },
+    })
+    await sendAutoReply(config, senderPhone, STOP_CONFIRM_MESSAGE)
+  } else if (keyword === 'start') {
+    await setOptIn(supabaseAdmin(), userId, contact.id, {
+      source: 'keyword',
+      ageConfirmed: true,
+      userAgent: 'jasmin-webhook',
+      details: { keyword: 'START' },
+    })
+    await sendAutoReply(config, senderPhone, START_CONFIRM_MESSAGE)
+  } else if (keyword === 'help') {
+    await logConsentEvent(supabaseAdmin(), {
+      userId,
+      contactId: contact.id,
+      action: 'help',
+      source: 'keyword',
+      userAgent: 'jasmin-webhook',
+      details: { keyword: 'HELP' },
+    })
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
     await sendAutoReply(config, senderPhone, HELP_MESSAGE)
   }
 
@@ -303,10 +346,29 @@ async function findOrCreateContact(
   userId: string,
   phone: string
 ): Promise<{ id: string; unread_count?: number; wasCreated: boolean } | null> {
+<<<<<<< HEAD
+=======
+  const { data: exact, error: exactError } = await supabaseAdmin()
+    .from('contacts')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('phone_normalized', phone)
+    .maybeSingle()
+  if (exactError) {
+    console.error('[sms-webhook] contact lookup failed:', exactError)
+    return null
+  }
+  if (exact) return { ...exact, wasCreated: false }
+
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
   const { data: contacts, error } = await supabaseAdmin()
     .from('contacts')
     .select('*')
     .eq('user_id', userId)
+<<<<<<< HEAD
+=======
+    .is('phone_normalized', null)
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
   if (error) {
     console.error('[sms-webhook] contact fetch failed:', error)
     return null
@@ -318,7 +380,11 @@ async function findOrCreateContact(
 
   const { data: created, error: createError } = await supabaseAdmin()
     .from('contacts')
+<<<<<<< HEAD
     .insert({ user_id: userId, phone, name: phone })
+=======
+    .insert({ user_id: userId, phone, phone_normalized: phone, name: phone })
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
     .select()
     .single()
   if (createError) {
@@ -341,12 +407,38 @@ async function findOrCreateConversation(userId: string, contactId: string) {
     .from('conversations')
     .insert({ user_id: userId, contact_id: contactId })
     .select()
+<<<<<<< HEAD
     .single()
   if (createError) {
     console.error('[sms-webhook] conversation create failed:', createError)
     return null
   }
   return created
+=======
+    .maybeSingle()
+  if (!createError && created) return created
+
+  if (createError) {
+    console.error(
+      '[sms-webhook] conversation create failed, retrying read:',
+      createError
+    )
+  }
+
+  const { data: retry, error: retryError } = await supabaseAdmin()
+    .from('conversations')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('contact_id', contactId)
+    .maybeSingle()
+  if (retryError || !retry) {
+    if (retryError) {
+      console.error('[sms-webhook] conversation re-read failed:', retryError)
+    }
+    return null
+  }
+  return retry
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 }
 
 async function flagBroadcastReplyIfAny(userId: string, contactId: string) {
@@ -369,3 +461,7 @@ async function flagBroadcastReplyIfAny(userId: string, contactId: string) {
     console.error('[sms-webhook] flagBroadcastReplyIfAny failed:', err)
   }
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)

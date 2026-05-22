@@ -14,9 +14,18 @@ import {
   RATE_LIMITS,
 } from '@/lib/rate-limit'
 import {
+<<<<<<< HEAD
   isSendAllowed,
   isWithinQuietHours,
   logSms,
+=======
+  evaluateSmsPolicy,
+  getConsent,
+  isSendAllowed,
+  isWithinQuietHours,
+  logSms,
+  type SmsMessageCategory,
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 } from '@/lib/sms/compliance'
 
 export async function POST(request: Request) {
@@ -46,6 +55,10 @@ export async function POST(request: Request) {
     const {
       conversation_id,
       message_type,
+<<<<<<< HEAD
+=======
+      message_category,
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
       content_text,
       media_url,
       template_name,
@@ -135,6 +148,7 @@ export async function POST(request: Request) {
     // to TCPA / carrier opt-in rules here — the WhatsApp providers have
     // their own consent model enforced by Meta.
     if (provider.name === 'jasmin') {
+<<<<<<< HEAD
       const decision = await isSendAllowed(supabase, contact.id)
       if (!decision.allowed) {
         await logSms(supabase, {
@@ -153,6 +167,35 @@ export async function POST(request: Request) {
         )
       }
       if (isWithinQuietHours(config)) {
+=======
+      const category = message_category as SmsMessageCategory | undefined
+      if (
+        !category ||
+        !['transactional', 'support', 'marketing'].includes(category)
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "message_category is required for SMS and must be one of: transactional, support, marketing",
+          },
+          { status: 400 }
+        )
+      }
+
+      const decision = await isSendAllowed(supabase, contact.id)
+      const consent = await getConsent(supabase, contact.id)
+      const policy = evaluateSmsPolicy({
+        consent,
+        messageCategory: category,
+        provider: 'jasmin',
+        inQuietHours: isWithinQuietHours(config),
+        allowFflMarketing: process.env.ALLOW_FFL_MARKETING_SMS === 'true',
+      })
+      if (!decision.allowed || !policy.allowed) {
+        const reason = !decision.allowed
+          ? decision.reason ?? 'SMS blocked by consent policy'
+          : policy.reasons.join('; ')
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
         await logSms(supabase, {
           userId: user.id,
           contactId: contact.id,
@@ -161,10 +204,17 @@ export async function POST(request: Request) {
           phone: sanitizedPhone,
           body: content_text ?? null,
           status: 'blocked',
+<<<<<<< HEAD
           blockReason: 'quiet hours',
         })
         return NextResponse.json(
           { error: 'SMS blocked: outside the allowed sending hours' },
+=======
+          blockReason: reason,
+        })
+        return NextResponse.json(
+          { error: `SMS blocked: ${reason}` },
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
           { status: 403 }
         )
       }
@@ -264,7 +314,11 @@ export async function POST(request: Request) {
       )
       await supabase
         .from('contacts')
+<<<<<<< HEAD
         .update({ phone: workingPhone })
+=======
+        .update({ phone: workingPhone, phone_normalized: workingPhone })
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
         .eq('id', contact.id)
     }
 

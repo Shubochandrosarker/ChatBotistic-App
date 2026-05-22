@@ -1,9 +1,13 @@
 import type { Metadata, Viewport } from "next";
+<<<<<<< HEAD
 import { Inter, Sora } from "next/font/google";
+=======
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 import { AppToaster } from "@/components/app-toaster";
 import { ThemeProvider, themeInitScript } from "@/components/theme-provider";
 import "./globals.css";
 
+<<<<<<< HEAD
 const inter = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
@@ -17,6 +21,8 @@ const sora = Sora({
   weight: ["600", "700"],
 });
 
+=======
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 export const metadata: Metadata = {
   title: {
     default: "WPistic WhatsApp CRM",
@@ -52,7 +58,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+<<<<<<< HEAD
       className={`${inter.variable} ${sora.variable} h-full antialiased`}
+=======
+      className="h-full antialiased"
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
       suppressHydrationWarning
     >
       <head>

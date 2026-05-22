@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { decrypt, encrypt, isLegacyFormat } from '@/lib/whatsapp/encryption'
+<<<<<<< HEAD
 import { getMediaUrl, downloadMedia } from '@/lib/whatsapp/meta-api'
+=======
+import { getMediaUrl } from '@/lib/whatsapp/meta-api'
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 import { normalizePhone, phonesMatch } from '@/lib/whatsapp/phone-utils'
 import { verifyMetaWebhookSignature } from '@/lib/whatsapp/webhook-signature'
 import { runAutomationsForTrigger } from '@/lib/automations/engine'
@@ -618,11 +622,41 @@ async function findOrCreateContact(
   phone: string,
   name: string
 ): Promise<ContactOutcome | null> {
+<<<<<<< HEAD
   // Look up existing contacts for this user
+=======
+  // Fast path: indexed lookup on normalized phone.
+  const { data: exact, error: exactError } = await supabaseAdmin()
+    .from('contacts')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('phone_normalized', phone)
+    .maybeSingle()
+
+  if (exactError) {
+    console.error('Error fetching contact by normalized phone:', exactError)
+    return null
+  }
+  if (exact) {
+    if (name && name !== exact.name) {
+      await supabaseAdmin()
+        .from('contacts')
+        .update({ name, updated_at: new Date().toISOString() })
+        .eq('id', exact.id)
+    }
+    return { contact: exact, wasCreated: false }
+  }
+
+  // Legacy fallback for rows created before phone_normalized existed.
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
   const { data: contacts, error: contactsError } = await supabaseAdmin()
     .from('contacts')
     .select('*')
     .eq('user_id', userId)
+<<<<<<< HEAD
+=======
+    .is('phone_normalized', null)
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 
   if (contactsError) {
     console.error('Error fetching contacts:', contactsError)
@@ -649,6 +683,10 @@ async function findOrCreateContact(
     .insert({
       user_id: userId,
       phone,
+<<<<<<< HEAD
+=======
+      phone_normalized: phone,
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
       name: name || phone,
     })
     .select()
@@ -675,14 +713,19 @@ async function findOrCreateConversation(userId: string, contactId: string) {
     return existing
   }
 
+<<<<<<< HEAD
   // Create new conversation
   const { data: newConv, error: createError } = await supabaseAdmin()
+=======
+  const { data: inserted, error: createError } = await supabaseAdmin()
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
     .from('conversations')
     .insert({
       user_id: userId,
       contact_id: contactId,
     })
     .select()
+<<<<<<< HEAD
     .single()
 
   if (createError) {
@@ -691,4 +734,31 @@ async function findOrCreateConversation(userId: string, contactId: string) {
   }
 
   return newConv
+=======
+    .maybeSingle()
+
+  if (!createError && inserted) {
+    return inserted
+  }
+
+  if (createError) {
+    console.error('Error creating conversation:', createError)
+  }
+
+  // Another request may have created it concurrently.
+  const { data: concurrent, error: refetchErr } = await supabaseAdmin()
+    .from('conversations')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('contact_id', contactId)
+    .maybeSingle()
+
+  if (refetchErr || !concurrent) {
+    if (refetchErr) {
+      console.error('Error re-fetching conversation after create:', refetchErr)
+    }
+    return null
+  }
+  return concurrent
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 }

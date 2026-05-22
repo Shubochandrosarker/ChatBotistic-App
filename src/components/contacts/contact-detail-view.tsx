@@ -2,6 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+<<<<<<< HEAD
+=======
+import { normalizePhone } from '@/lib/whatsapp/phone-utils';
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 import { toast } from 'sonner';
 import type { Contact, Tag, ContactTag, ContactNote, CustomField, ContactCustomValue, Deal } from '@/types';
 import {
@@ -192,6 +196,10 @@ export function ContactDetailView({
       .update({
         name: editName.trim() || null,
         phone: editPhone.trim(),
+<<<<<<< HEAD
+=======
+        phone_normalized: normalizePhone(editPhone.trim()),
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
         email: editEmail.trim() || null,
         company: editCompany.trim() || null,
         updated_at: new Date().toISOString(),

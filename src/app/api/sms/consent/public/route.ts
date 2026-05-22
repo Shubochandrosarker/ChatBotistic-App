@@ -9,7 +9,11 @@
  * It only ever *creates an opt-in*; it cannot read or modify anything
  * else, so the widget key is a public identifier rather than a secret.
  *
+<<<<<<< HEAD
  * Body: { widget_key, phone, name?, age_confirmed }
+=======
+ * Body: { widget_key, phone, name?, age_confirmed, legal_text_version? }
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
  */
 
 import { NextResponse } from 'next/server'
@@ -44,7 +48,11 @@ export async function POST(request: Request) {
     if (!limit.success) return rateLimitResponse(limit)
 
     const body = await request.json()
+<<<<<<< HEAD
     const { widget_key, phone, name, age_confirmed } = body
+=======
+    const { widget_key, phone, name, age_confirmed, legal_text_version } = body
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 
     if (!widget_key || typeof widget_key !== 'string') {
       return NextResponse.json({ error: 'Missing form key' }, { status: 400 })
@@ -81,6 +89,7 @@ export async function POST(request: Request) {
     const userId = config.user_id
 
     // Find or create the contact for this tenant.
+<<<<<<< HEAD
     const { data: contacts } = await supabaseAdmin()
       .from('contacts')
       .select('id, phone, name')
@@ -89,6 +98,33 @@ export async function POST(request: Request) {
     let contact = contacts?.find((c: any) =>
       phonesMatch(c.phone, normalizedPhone)
     )
+=======
+    const { data: exact, error: exactError } = await supabaseAdmin()
+      .from('contacts')
+      .select('id, phone, name')
+      .eq('user_id', userId)
+      .eq('phone_normalized', normalizedPhone)
+      .maybeSingle()
+    if (exactError) {
+      console.error('[sms-optin] normalized lookup failed:', exactError)
+      return NextResponse.json(
+        { error: 'Could not record your opt-in. Please try again.' },
+        { status: 500 }
+      )
+    }
+
+    let contact = exact
+
+    if (!contact) {
+      const { data: legacy } = await supabaseAdmin()
+        .from('contacts')
+        .select('id, phone, name')
+        .eq('user_id', userId)
+        .is('phone_normalized', null)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      contact = legacy?.find((c: any) => phonesMatch(c.phone, normalizedPhone))
+    }
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 
     if (!contact) {
       const { data: created, error: createError } = await supabaseAdmin()
@@ -96,6 +132,10 @@ export async function POST(request: Request) {
         .insert({
           user_id: userId,
           phone: normalizedPhone,
+<<<<<<< HEAD
+=======
+          phone_normalized: normalizedPhone,
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
           name: (typeof name === 'string' && name.trim()) || normalizedPhone,
         })
         .select('id')
@@ -113,7 +153,14 @@ export async function POST(request: Request) {
     await setOptIn(supabaseAdmin(), userId, contact.id, {
       source: 'web_form',
       ip,
+<<<<<<< HEAD
       ageConfirmed: true,
+=======
+      userAgent: request.headers.get('user-agent') ?? undefined,
+      ageConfirmed: true,
+      legalTextVersion:
+        typeof legal_text_version === 'string' ? legal_text_version : undefined,
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
     })
 
     return NextResponse.json({ success: true })

@@ -306,10 +306,37 @@ async function findOrCreateContact(
   phone: string,
   name: string
 ): Promise<{ id: string; unread_count?: number; wasCreated: boolean } | null> {
+<<<<<<< HEAD
+=======
+  const { data: exact, error: exactError } = await supabaseAdmin()
+    .from('contacts')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('phone_normalized', phone)
+    .maybeSingle()
+  if (exactError) {
+    console.error('[twilio-webhook] contact lookup failed:', exactError)
+    return null
+  }
+  if (exact) {
+    if (name && name !== exact.name) {
+      await supabaseAdmin()
+        .from('contacts')
+        .update({ name, updated_at: new Date().toISOString() })
+        .eq('id', exact.id)
+    }
+    return { ...exact, wasCreated: false }
+  }
+
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
   const { data: contacts, error } = await supabaseAdmin()
     .from('contacts')
     .select('*')
     .eq('user_id', userId)
+<<<<<<< HEAD
+=======
+    .is('phone_normalized', null)
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
   if (error) {
     console.error('[twilio-webhook] contact fetch failed:', error)
     return null
@@ -329,7 +356,11 @@ async function findOrCreateContact(
 
   const { data: created, error: createError } = await supabaseAdmin()
     .from('contacts')
+<<<<<<< HEAD
     .insert({ user_id: userId, phone, name: name || phone })
+=======
+    .insert({ user_id: userId, phone, phone_normalized: phone, name: name || phone })
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
     .select()
     .single()
   if (createError) {
@@ -352,12 +383,38 @@ async function findOrCreateConversation(userId: string, contactId: string) {
     .from('conversations')
     .insert({ user_id: userId, contact_id: contactId })
     .select()
+<<<<<<< HEAD
     .single()
   if (createError) {
     console.error('[twilio-webhook] conversation create failed:', createError)
     return null
   }
   return created
+=======
+    .maybeSingle()
+  if (!createError && created) return created
+
+  if (createError) {
+    console.error(
+      '[twilio-webhook] conversation create failed, retrying read:',
+      createError
+    )
+  }
+
+  const { data: retry, error: retryError } = await supabaseAdmin()
+    .from('conversations')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('contact_id', contactId)
+    .maybeSingle()
+  if (retryError || !retry) {
+    if (retryError) {
+      console.error('[twilio-webhook] conversation re-read failed:', retryError)
+    }
+    return null
+  }
+  return retry
+>>>>>>> 4c2e409 (Guns2Ammo Phase 1 SMS compliance + preflight + deploy runbook)
 }
 
 /**
