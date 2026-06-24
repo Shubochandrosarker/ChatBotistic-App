@@ -54,7 +54,7 @@ jobs:
         run: npm run build
 
       - name: Upload deployable artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           # Downloaded zip contains server.js, node_modules/, public/,
           # and .next/ at its root — upload its CONTENTS to the hPanel
