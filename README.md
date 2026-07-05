@@ -31,6 +31,24 @@ it into a commercial multi-tenant SaaS.
 - **Real-time dashboard** — response times, daily volume, pipeline
   value, cross-module activity feed.
 
+## WordPressistic ecosystem
+
+WPistic WhatsApp CRM is one product in the WordPressistic family and
+stays a **separate codebase** from the Chatbotistic products:
+
+- **Chatbotistic** (`ChatBotistic-Complete-System-Management`) — the
+  chatbotistic.com website, membership/licensing chain, and the
+  standalone **Chatbotistic Dashboard** (`chatbotistic-dashboard/`,
+  dashboard.chatbotistic.com) for widget, landing-page, lead, and
+  campaign management.
+- **Chatbotistic SaaS Connector** (`chatbotistic-saas-connector`) —
+  the distribution repo for the WordPress connector plugin stack.
+
+This CRM's architecture (org tenancy + RLS, HMAC SSO bridge,
+provider-strategy messaging layer, encrypted credentials) served as
+the reference design for the Chatbotistic Dashboard, but no code is
+shared between the repos — each evolves independently.
+
 ## Multi-tenancy
 
 Every row in the database is scoped to an `org_id`. Users belong to
