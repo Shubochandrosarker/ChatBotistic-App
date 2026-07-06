@@ -44,7 +44,7 @@ thousands-of-files upload that stalls in the hPanel File Manager.
 | ------ | ----- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → `anon` `public` key |
-| `NEXT_PUBLIC_SITE_URL` | optional — defaults to `https://crm.wpistic.com` |
+| `NEXT_PUBLIC_SITE_URL` | optional — defaults to `https://chatbot.wpistic.cloud` |
 
 **Each deploy.** GitHub → **Actions → Build deployment artifact → Run
 workflow**. When it finishes, open the run and download the
@@ -71,7 +71,7 @@ them:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co \
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key \
-NEXT_PUBLIC_SITE_URL=https://crm.wpistic.com \
+NEXT_PUBLIC_SITE_URL=https://chatbot.wpistic.cloud \
 npm run build
 ```
 
@@ -88,7 +88,7 @@ not bake them in; set them in hPanel (step 4).
 ## 2. Create the Node.js app in hPanel
 
 First make sure the **subdomain exists**: hPanel → **Domains →
-Subdomains** → create `crm` under `wpistic.com`. The Node.js panel
+Subdomains** → create `chatbot` under `wpistic.cloud`. The Node.js panel
 can't attach an app to a subdomain that doesn't exist yet — a missing
 subdomain is the usual reason "Create" fails.
 
@@ -103,7 +103,7 @@ Then in hPanel: **Websites → your domain → Advanced → Node.js**
 | ----------------------- | -------------------------------------------------- |
 | Node.js version         | 20 or 22 (the app requires `>=20`)                 |
 | Application root         | a fresh, empty folder, e.g. `crm`                  |
-| Application URL          | `crm.wpistic.com`                                  |
+| Application URL          | `chatbot.wpistic.cloud`                            |
 | Application startup file | `server.js`                                        |
 
 If a previous failed attempt left a half-created app, delete it and
@@ -158,10 +158,10 @@ means `.next/static/` was not uploaded).
 Then wire up the externally-reachable URLs:
 
 - **Meta webhook** — point the Meta app's WhatsApp webhook at
-  `https://your-domain/api/whatsapp/webhook`.
+  `https://chatbot.wpistic.cloud/api/whatsapp/webhook`.
 - **Automation cron** — if you use automation Wait steps, add a hPanel
   **Cron Job** that periodically calls
-  `https://your-domain/api/automations/cron` with the
+  `https://chatbot.wpistic.cloud/api/automations/cron` with the
   `AUTOMATION_CRON_SECRET`. See `docs/automations-and-cron.md`.
 
 ## Redeploying
