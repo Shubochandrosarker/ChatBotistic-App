@@ -44,7 +44,10 @@ function applyTheme(resolved: ResolvedTheme) {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
+  // Light is the product default — visitors without a stored choice get
+  // the light theme regardless of OS preference. "system" stays available
+  // as an explicit opt-in via the theme toggle.
+  const [theme, setThemeState] = useState<Theme>("light");
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
 
   // Hydrate from storage on mount. localStorage is unavailable during
@@ -54,7 +57,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const initial: Theme =
       stored === "light" || stored === "dark" || stored === "system"
         ? stored
-        : "system";
+        : "light";
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setThemeState(initial);
   }, []);
@@ -112,11 +115,13 @@ export function useTheme(): ThemeContextValue {
   return ctx;
 }
 
-/** Inline, blocking script — runs before paint to avoid a theme flash. */
+/** Inline, blocking script — runs before paint to avoid a theme flash.
+ * Mirrors the provider's default: no stored choice → light; the OS
+ * preference only applies when "system" was explicitly chosen. */
 export const themeInitScript = `
 (function(){try{
 var t=localStorage.getItem('${STORAGE_KEY}');
-var d=t==='dark'||((t===null||t==='system')&&window.matchMedia('(prefers-color-scheme: dark)').matches);
+var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);
 var r=document.documentElement;
 if(d)r.classList.add('dark');
 r.style.colorScheme=d?'dark':'light';

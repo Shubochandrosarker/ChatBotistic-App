@@ -77,7 +77,6 @@ export function WhatsAppConfig() {
   const [a2pCampaignId, setA2pCampaignId] = useState('');
   const [a2pStatus, setA2pStatus] = useState('unregistered');
   const [smsWidgetKey, setSmsWidgetKey] = useState('');
-  const [savingCompliance, setSavingCompliance] = useState(false);
 
   // True once the user has typed into the masked secret field, meaning a
   // fresh secret is available to send (the API needs it to re-verify).
@@ -270,6 +269,14 @@ export function WhatsAppConfig() {
       };
     }
 
+    // Jasmin shows the SMS compliance card on this same page — validate it
+    // up front and save it in the same click, so one button saves the tab.
+    let compliancePayload: Record<string, unknown> | null = null;
+    if (provider === 'jasmin') {
+      compliancePayload = buildCompliancePayload();
+      if (!compliancePayload) return;
+    }
+
     try {
       setSaving(true);
 
@@ -285,6 +292,24 @@ export function WhatsAppConfig() {
         toast.error(data.error || 'Failed to save configuration');
         setSaving(false);
         return;
+      }
+
+      if (compliancePayload) {
+        const complianceRes = await fetch('/api/whatsapp/config', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(compliancePayload),
+        });
+        if (!complianceRes.ok) {
+          const complianceData = await complianceRes.json();
+          toast.error(
+            complianceData.error ||
+              'Configuration saved, but compliance settings failed to save'
+          );
+          if (user) await fetchConfig(user.id);
+          setSaving(false);
+          return;
+        }
       }
 
       toast.success(
@@ -388,7 +413,12 @@ export function WhatsAppConfig() {
     toast.success('Webhook URL copied to clipboard');
   }
 
-  async function handleSaveCompliance() {
+  /**
+   * Validate the SMS compliance fields and return the PATCH payload, or
+   * null (with a toast) when they don't validate. Saved together with the
+   * provider credentials by the single "Save Configuration" button.
+   */
+  function buildCompliancePayload(): Record<string, unknown> | null {
     const parseHour = (s: string): number | null | typeof NaN => {
       if (s.trim() === '') return null;
       const n = Number(s);
@@ -398,40 +428,21 @@ export function WhatsAppConfig() {
     const end = parseHour(smsQuietEnd);
     if (Number.isNaN(start) || Number.isNaN(end)) {
       toast.error('Quiet hours must be whole numbers from 0 to 23');
-      return;
+      return null;
     }
     if ((start === null) !== (end === null)) {
       toast.error('Set both quiet-hour fields, or leave both empty');
-      return;
+      return null;
     }
 
-    try {
-      setSavingCompliance(true);
-      const res = await fetch('/api/whatsapp/config', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sms_quiet_hours_start: start,
-          sms_quiet_hours_end: end,
-          sms_timezone: smsTimezone.trim() || 'America/New_York',
-          a2p_brand_id: a2pBrandId.trim(),
-          a2p_campaign_id: a2pCampaignId.trim(),
-          a2p_status: a2pStatus,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || 'Failed to save compliance settings');
-        return;
-      }
-      toast.success('Compliance settings saved');
-      if (user) await fetchConfig(user.id);
-    } catch (err) {
-      console.error('Save compliance error:', err);
-      toast.error('Failed to save compliance settings');
-    } finally {
-      setSavingCompliance(false);
-    }
+    return {
+      sms_quiet_hours_start: start,
+      sms_quiet_hours_end: end,
+      sms_timezone: smsTimezone.trim() || 'America/New_York',
+      a2p_brand_id: a2pBrandId.trim(),
+      a2p_campaign_id: a2pCampaignId.trim(),
+      a2p_status: a2pStatus,
+    };
   }
 
   if (loading) {
@@ -990,20 +1001,10 @@ export function WhatsAppConfig() {
                 </div>
               )}
 
-              <Button
-                onClick={handleSaveCompliance}
-                disabled={savingCompliance || !config}
-                className="bg-primary hover:bg-primary text-primary-foreground"
-              >
-                {savingCompliance ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Compliance Settings'
-                )}
-              </Button>
+              <p className="text-xs text-muted-foreground">
+                Compliance settings are saved together with the gateway
+                credentials by the Save Configuration button below.
+              </p>
             </CardContent>
           </Card>
         )}
