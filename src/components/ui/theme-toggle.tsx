@@ -14,7 +14,7 @@ const options: { value: Theme; label: string; icon: typeof Sun }[] = [
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
 
-  // The provider seeds `theme` to "system" on both server and first
+  // The provider seeds `theme` to "light" on both server and first
   // client render, so the markup matches; the highlight settles to the
   // stored choice once the provider hydrates.
   return (
