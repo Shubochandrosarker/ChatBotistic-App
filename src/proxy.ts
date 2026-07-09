@@ -1,15 +1,15 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { getMissingPublicSupabaseEnv } from './lib/supabase/env';
+import { getPublicSupabaseEnv, getMissingPublicSupabaseEnv } from './lib/supabase/env';
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
   const missingSupabaseEnv = getMissingPublicSupabaseEnv();
 
   if (missingSupabaseEnv.length > 0) {
-    const message = `Supabase is not configured. Missing: ${missingSupabaseEnv.join(
+    const message = `Supabase is not configured. Problem with: ${missingSupabaseEnv.join(
       ', '
-    )}. Add these values in the deployment provider and redeploy.`;
+    )}. NEXT_PUBLIC_* values are baked into the app at build time — set the real values from Supabase Project Settings > API in the build environment, then rebuild and redeploy. Saving them in the hosting panel after the fact has no effect on an already-built app.`;
 
     if (request.nextUrl.pathname.startsWith('/api/')) {
       return NextResponse.json({ error: message }, { status: 503 });
@@ -21,9 +21,11 @@ export async function proxy(request: NextRequest) {
     });
   }
 
+  const { url: supabaseUrl, anonKey: supabaseAnonKey } = getPublicSupabaseEnv();
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
