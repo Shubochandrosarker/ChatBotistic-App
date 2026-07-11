@@ -37,6 +37,17 @@ function baseUrl(): string {
   return (process.env.TOCHAT_API_BASE || DEFAULT_BASE).replace(/\/+$/, '')
 }
 
+/**
+ * The public Tochat.be API origin — safe to send to the browser (it's
+ * an API host, not a secret) so the UI can build embed script URLs
+ * (`{base}/widget/{id}/load.js`, confirmed against the WordPress
+ * plugins' own embed-code generators) without duplicating the
+ * TOCHAT_API_BASE override logic client-side.
+ */
+export function tochatPublicBase(): string {
+  return baseUrl()
+}
+
 /** True when the Tochat.be master-account integration is configured. */
 export function isTochatConfigured(): boolean {
   return Boolean(process.env.TOCHAT_API_EMAIL && process.env.TOCHAT_API_PASSWORD)
@@ -201,27 +212,67 @@ function qs(params: Record<string, string | number | string[]>): string {
 export type TochatResource = Record<string, unknown>
 
 /**
- * The Widget Studio v1 field set — the subset of the full Tochat
- * widget schema (see the Postman collection / services.tochat.be API
- * docs for the complete ~30-field shape, including banners, landing
- * page copy, translations, and targeting rules) that's exposed in
- * this app's UI today. Extra fields on a real widget response are
- * preserved and round-tripped by `TochatResource` — this interface
- * only documents what the dashboard reads and writes.
+ * The full widget field set exposed by Widget Studio, sourced from the
+ * "Create widget" / "Edit" examples in the ChatWith Postman collection
+ * (the only ground truth available — services.tochat.be's own docs
+ * endpoint is unreachable from this environment). Fields not in this
+ * list still round-trip untouched through `TochatResource`.
  */
 export interface TochatWidget extends TochatResource {
   id?: string
   '@id'?: string
   name: string
   active?: boolean
+  userClient?: string
+
+  // Appearance
   color?: string
   rightpos?: boolean
   isopen?: boolean
+  theme?: number
+  zIndex?: number
+  iconUrl?: string
+  whatsappIconUrl?: string
+  backgroundImageUrl?: string
+
+  // Messages
   widgetMessage?: string
   buttonMessage?: string
   offlineMessage?: string
-  iconUrl?: string
-  userClient?: string
+  legend?: string
+  WelcomeBackMessage?: string
+  transYourPhone?: string
+  telValidationText?: string
+  requiredValidationText?: string
+  emailValidationText?: string
+  transSuccessMessage?: string
+  translateChatAnswer?: string
+  translateOnlineFrom?: string
+  translateShowTimetable?: string
+  showAllAgents?: string
+  showLessAgents?: string
+
+  // Banner
+  bannerUrl?: string
+  ActivateBanner?: boolean
+  returningBannerUrl?: string
+  showBannerLanding?: boolean
+
+  // Landing page
+  slug?: string
+  landingPrimaryColor?: string
+  landingSecondaryColor?: string
+  landingLegal?: string
+  landingTermsAndConditions?: string
+  landingPrivacy?: string
+
+  // Legal / cookies
+  enableCookieBanner?: boolean
+  cookiesTitle?: string
+  cookiesDescription?: string
+
+  // Advanced
+  haltBusiness?: boolean
 }
 
 /**
