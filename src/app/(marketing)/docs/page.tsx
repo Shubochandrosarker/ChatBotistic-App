@@ -544,7 +544,17 @@ export default function DocsPage() {
             lead="Org-scoped proxy to the Tochat.be widget API — the first slice of Widget Studio. Requires the master Tochat.be account (TOCHAT_API_EMAIL / TOCHAT_API_PASSWORD) to be configured; this is a separate integration from the Leads sync above, which only reads the lead-export feed."
           >
             <Endpoint method="GET" path="/api/tochat/widgets">
-              <p>List the signed-in org&apos;s widgets.</p>
+              <p>
+                List the signed-in org&apos;s widgets. The response also
+                includes{' '}
+                <code className="font-mono text-[13px]">embedBaseUrl</code>{' '}
+                — the Tochat.be API origin — so the UI can build embed
+                script URLs (
+                <code className="font-mono text-[13px]">
+                  {'{embedBaseUrl}'}/widget/{'{id}'}/load.js
+                </code>
+                ) without hardcoding it.
+              </p>
             </Endpoint>
             <Endpoint method="POST" path="/api/tochat/widgets">
               <ParamsTable

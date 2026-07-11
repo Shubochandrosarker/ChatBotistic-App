@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
+  Code2,
   Loader2,
   MessageSquareText,
   MoreVertical,
@@ -28,17 +29,20 @@ import {
 } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { WidgetForm } from '@/components/widgets/widget-form';
+import { EmbedCodeDialog } from '@/components/widgets/embed-code-dialog';
 import type { TochatWidget } from '@/lib/tochat/client';
 
 interface WidgetsResponse {
   configured: boolean;
   widgets?: TochatWidget[];
+  embedBaseUrl?: string;
   error?: string;
 }
 
 export default function WidgetsPage() {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [widgets, setWidgets] = useState<TochatWidget[]>([]);
+  const [embedBaseUrl, setEmbedBaseUrl] = useState('https://services.tochat.be');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +50,7 @@ export default function WidgetsPage() {
   const [editWidget, setEditWidget] = useState<TochatWidget | null>(null);
   const [pendingDelete, setPendingDelete] = useState<TochatWidget | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [embedWidget, setEmbedWidget] = useState<TochatWidget | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,6 +63,7 @@ export default function WidgetsPage() {
       } else {
         setConfigured(data.configured);
         setWidgets(data.widgets ?? []);
+        if (data.embedBaseUrl) setEmbedBaseUrl(data.embedBaseUrl);
       }
     } catch {
       setError('Could not reach the server');
@@ -167,6 +173,7 @@ export default function WidgetsPage() {
                 setFormOpen(true);
               }}
               onDelete={() => setPendingDelete(widget)}
+              onEmbed={() => setEmbedWidget(widget)}
             />
           ))}
         </ul>
@@ -177,6 +184,13 @@ export default function WidgetsPage() {
         onOpenChange={setFormOpen}
         widget={editWidget}
         onSaved={load}
+      />
+
+      <EmbedCodeDialog
+        open={!!embedWidget}
+        onOpenChange={(v) => !v && setEmbedWidget(null)}
+        widget={embedWidget}
+        embedBaseUrl={embedBaseUrl}
       />
 
       <Dialog
@@ -221,11 +235,13 @@ function WidgetCard({
   onToggle,
   onEdit,
   onDelete,
+  onEmbed,
 }: {
   widget: TochatWidget;
   onToggle: (next: boolean) => void;
   onEdit: () => void;
   onDelete: () => void;
+  onEmbed: () => void;
 }) {
   return (
     <li className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4">
@@ -255,6 +271,10 @@ function WidgetCard({
             <MoreVertical className="h-4 w-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onEmbed}>
+              <Code2 className="size-4" />
+              Get embed code
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={onEdit}>
               <Pencil className="size-4" />
               Edit

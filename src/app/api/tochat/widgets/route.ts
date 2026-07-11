@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { TochatApiError, isTochatConfigured, widgets } from '@/lib/tochat/client'
+import { TochatApiError, isTochatConfigured, tochatPublicBase, widgets } from '@/lib/tochat/client'
 import { tochatUserClientForOrg } from '@/lib/tochat/org'
 import { requireOrgId } from '@/lib/api/require-org-id'
 
@@ -30,7 +30,11 @@ export async function GET() {
     const userClient = tochatUserClientForOrg(orgId)
     const list = await widgets.list(userClient)
 
-    return NextResponse.json({ configured: true, widgets: list })
+    return NextResponse.json({
+      configured: true,
+      widgets: list,
+      embedBaseUrl: tochatPublicBase(),
+    })
   } catch (err) {
     if (err instanceof TochatApiError) {
       return NextResponse.json({ error: err.message }, { status: err.status })
