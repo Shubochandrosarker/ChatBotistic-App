@@ -13,11 +13,12 @@ export const metadata: Metadata = {
 /* Local building blocks                                               */
 /* ------------------------------------------------------------------ */
 
-type Method = "GET" | "POST" | "PATCH" | "DELETE";
+type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 const methodTone: Record<Method, string> = {
   GET: "bg-[oklch(0.62_0.17_250)]/12 text-[oklch(0.48_0.17_250)] dark:text-[oklch(0.72_0.15_250)]",
   POST: "bg-success/12 text-success",
+  PUT: "bg-warning/15 text-warning",
   PATCH: "bg-warning/15 text-warning",
   DELETE: "bg-destructive/10 text-destructive",
 };
@@ -548,16 +549,40 @@ export default function DocsPage() {
               <ParamsTable
                 params={[
                   { name: "name", type: "string", required: true, description: "Widget name." },
+                  { name: "active", type: "boolean", description: "Whether the widget is live." },
                   { name: "color", type: "string", description: "Hex brand color, e.g. #27d974." },
+                  { name: "rightpos", type: "boolean", description: "true = right side, false = left side." },
+                  { name: "isopen", type: "boolean", description: "Auto-open the chat window on load." },
                   { name: "widgetMessage", type: "string", description: "Greeting shown in the chat bubble." },
+                  { name: "buttonMessage", type: "string", description: "Send-button label." },
+                  { name: "offlineMessage", type: "string", description: "Shown when no agent is online." },
                   { name: "iconUrl", type: "string", description: "Launcher icon URL." },
                 ]}
               />
               <p>
                 Additional Tochat widget fields (banners, landing colors,
-                translations, targeting) are passed through as-is — see the
-                Tochat.be API reference for the full schema.
+                translations, targeting rules) are passed through as-is —
+                see the Tochat.be API reference for the full schema. The
+                Widget Studio UI at{" "}
+                <code className="font-mono text-[13px]">/widgets</code>{" "}
+                currently manages the field set above.
               </p>
+            </Endpoint>
+            <Endpoint method="GET" path="/api/tochat/widgets/{id}">
+              <p>Fetch a single widget owned by the caller&apos;s org.</p>
+            </Endpoint>
+            <Endpoint method="PUT" path="/api/tochat/widgets/{id}">
+              <p>
+                Replace a widget&apos;s fields (same body shape as create).
+                Re-verifies the widget&apos;s{" "}
+                <code className="font-mono text-[13px]">userClient</code> tag
+                matches the caller&apos;s org before writing — Tochat.be is a
+                single shared master account across every org on this
+                platform, so widget ids alone don&apos;t prove ownership.
+              </p>
+            </Endpoint>
+            <Endpoint method="DELETE" path="/api/tochat/widgets/{id}">
+              <p>Delete a widget, after the same ownership check.</p>
             </Endpoint>
           </Section>
 

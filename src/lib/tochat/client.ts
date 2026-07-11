@@ -200,6 +200,30 @@ function qs(params: Record<string, string | number | string[]>): string {
 
 export type TochatResource = Record<string, unknown>
 
+/**
+ * The Widget Studio v1 field set — the subset of the full Tochat
+ * widget schema (see the Postman collection / services.tochat.be API
+ * docs for the complete ~30-field shape, including banners, landing
+ * page copy, translations, and targeting rules) that's exposed in
+ * this app's UI today. Extra fields on a real widget response are
+ * preserved and round-tripped by `TochatResource` — this interface
+ * only documents what the dashboard reads and writes.
+ */
+export interface TochatWidget extends TochatResource {
+  id?: string
+  '@id'?: string
+  name: string
+  active?: boolean
+  color?: string
+  rightpos?: boolean
+  isopen?: boolean
+  widgetMessage?: string
+  buttonMessage?: string
+  offlineMessage?: string
+  iconUrl?: string
+  userClient?: string
+}
+
 // ---- Widgets ------------------------------------------------------------
 
 export const widgets = {
