@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
-import { TochatApiError, isTochatConfigured, operators, widgets } from '@/lib/tochat/client'
-import { tochatUserClientForOrg } from '@/lib/tochat/org'
+import { TochatApiError, isTochatConfigured, operators, resourceIdFromIri } from '@/lib/tochat/client'
 import { requireOrgId } from '@/lib/api/require-org-id'
-import { operatorOwnedByOrg } from '@/lib/tochat/ownership'
+import { operatorOwnedByOrg, widgetOwnedByOrg } from '@/lib/tochat/ownership'
+import { parseJsonBody } from '@/lib/api/parse-json-body'
 
 /**
  * GET /api/tochat/operators/{id}
@@ -56,8 +56,9 @@ export async function PUT(
     const existing = await operatorOwnedByOrg(id, orgId)
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    const payload = (await request.json()) as Record<string, unknown>
-    if (!payload || typeof payload.name !== 'string' || !payload.name.trim()) {
+    const { body: payload, error: parseError } = await parseJsonBody(request)
+    if (parseError) return parseError
+    if (typeof payload.name !== 'string' || !payload.name.trim()) {
       return NextResponse.json({ error: '`name` is required' }, { status: 400 })
     }
     if (typeof payload.number !== 'string' || !payload.number.trim()) {
@@ -65,17 +66,30 @@ export async function PUT(
     }
 
     // Moving an operator to a different widget re-verifies the new
-    // widget belongs to the same org; otherwise keep its current one.
-    let businessIri = existing.business
+    // widget belongs to the same org; otherwise keep its current one —
+    // re-derived as a plain IRI rather than re-sent as whatever shape
+    // GET returned it in (a string IRI or an embedded {id, '@id'}
+    // object depending on Tochat's serialization group), since PUT
+    // expects the IRI form.
+    let businessId: string | null
     if (typeof payload.business === 'string' && payload.business.trim()) {
-      const targetWidget = await widgets.get(payload.business)
-      if (targetWidget.userClient !== tochatUserClientForOrg(orgId)) {
+      const targetWidget = await widgetOwnedByOrg(payload.business, orgId)
+      if (!targetWidget) {
         return NextResponse.json({ error: 'Widget not found' }, { status: 404 })
       }
-      businessIri = `/api/v2/widgets/${payload.business}`
+      businessId = payload.business
+    } else {
+      businessId = resourceIdFromIri(existing.business)
+    }
+    if (!businessId) {
+      console.error('[api/tochat/operators/:id] existing.business had an unrecognized shape:', existing.business)
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 
-    const updated = await operators.update(id, { ...payload, business: businessIri })
+    const updated = await operators.update(id, {
+      ...payload,
+      business: `/api/v2/widgets/${businessId}`,
+    })
     return NextResponse.json({ configured: true, operator: updated })
   } catch (err) {
     if (err instanceof TochatApiError) {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { TochatApiError, isTochatConfigured, faqGroups, type TochatFaq } from '@/lib/tochat/client'
 import { requireOrgId } from '@/lib/api/require-org-id'
 import { operatorOwnedByOrg } from '@/lib/tochat/ownership'
+import { parseJsonBody } from '@/lib/api/parse-json-body'
 
 /**
  * GET /api/tochat/faq-groups?operatorId={id}
@@ -68,8 +69,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ configured: false }, { status: 200 })
     }
 
-    const payload = (await request.json()) as Record<string, unknown>
-    if (!payload || typeof payload.title !== 'string' || !payload.title.trim()) {
+    const { body: payload, error: parseError } = await parseJsonBody(request)
+    if (parseError) return parseError
+    if (typeof payload.title !== 'string' || !payload.title.trim()) {
       return NextResponse.json({ error: '`title` is required' }, { status: 400 })
     }
     if (typeof payload.operatorId !== 'string' || !payload.operatorId.trim()) {

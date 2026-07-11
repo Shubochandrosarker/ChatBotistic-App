@@ -74,9 +74,13 @@ export default function AgentsPage() {
         setError(operatorsData.error ?? 'Failed to load agents');
         return;
       }
+      if (!widgetsRes.ok) {
+        setError(widgetsData.error ?? 'Failed to load widgets');
+        return;
+      }
       setConfigured(operatorsData.configured);
       setAgents(operatorsData.operators ?? []);
-      setWidgets(widgetsRes.ok ? (widgetsData.widgets ?? []) : []);
+      setWidgets(widgetsData.widgets ?? []);
     } catch {
       setError('Could not reach the server');
     } finally {

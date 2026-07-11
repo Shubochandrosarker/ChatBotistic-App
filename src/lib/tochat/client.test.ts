@@ -52,7 +52,7 @@ describe('tochat client', () => {
     expect(fetchMock.mock.calls[1][0]).toContain('userClient%5B%5D=org-abc')
   })
 
-  it('clears the cached token and retries once on a 401', async () => {
+  it('clears the cached token and retries once on a 401, carrying the fresh token', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse(200, { token: 'jwt-expired' }))
@@ -65,6 +65,29 @@ describe('tochat client', () => {
     const result = await widgets.list('org-abc')
 
     expect(result).toEqual([])
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+    // The first list attempt (call 2) carried the now-expired token...
+    expect(fetchMock.mock.calls[1][1]?.headers?.Authorization).toBe('Bearer jwt-expired')
+    // ...and the retried list attempt (call 4) carried the freshly-issued one.
+    expect(fetchMock.mock.calls[3][0]).not.toContain('/api/authentication_token')
+    expect(fetchMock.mock.calls[3][1]?.headers?.Authorization).toBe('Bearer jwt-fresh')
+  })
+
+  it('gives up after a second consecutive 401 instead of retrying forever', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(200, { token: 'jwt-1' }))
+      .mockResolvedValueOnce(jsonResponse(401, { detail: 'Expired JWT Token' }))
+      .mockResolvedValueOnce(jsonResponse(200, { token: 'jwt-2' }))
+      .mockResolvedValueOnce(jsonResponse(401, { detail: 'Expired JWT Token' }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { widgets } = await import('./client')
+    await expect(widgets.list('org-abc')).rejects.toMatchObject({
+      name: 'TochatApiError',
+      status: 401,
+    })
+    // 2 logins + 2 list attempts — exactly one retry, no unbounded loop.
     expect(fetchMock).toHaveBeenCalledTimes(4)
   })
 
@@ -90,5 +113,35 @@ describe('tochatUserClientForOrg', () => {
   it('derives a deterministic userClient tag from the org id', async () => {
     const { tochatUserClientForOrg } = await import('./org')
     expect(tochatUserClientForOrg('abc-123')).toBe('org-abc-123')
+  })
+})
+
+describe('resourceIdFromIri', () => {
+  it('extracts the trailing segment from a plain IRI string', async () => {
+    const { resourceIdFromIri } = await import('./client')
+    expect(resourceIdFromIri('/api/v2/widgets/abc-123')).toBe('abc-123')
+  })
+
+  it('strips trailing slashes before extracting the id', async () => {
+    const { resourceIdFromIri } = await import('./client')
+    expect(resourceIdFromIri('/api/v2/widgets/abc-123/')).toBe('abc-123')
+  })
+
+  it('reads `id` off an embedded relation object', async () => {
+    const { resourceIdFromIri } = await import('./client')
+    expect(resourceIdFromIri({ id: 'abc-123', '@id': '/api/v2/widgets/abc-123' })).toBe('abc-123')
+  })
+
+  it('falls back to `@id` when an embedded object has no `id`', async () => {
+    const { resourceIdFromIri } = await import('./client')
+    expect(resourceIdFromIri({ '@id': '/api/v2/widgets/abc-123' })).toBe('abc-123')
+  })
+
+  it('returns null for unrecognized shapes rather than throwing', async () => {
+    const { resourceIdFromIri } = await import('./client')
+    expect(resourceIdFromIri(null)).toBeNull()
+    expect(resourceIdFromIri(undefined)).toBeNull()
+    expect(resourceIdFromIri(42)).toBeNull()
+    expect(resourceIdFromIri({})).toBeNull()
   })
 })

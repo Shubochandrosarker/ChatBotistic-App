@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
-import { TochatApiError, isTochatConfigured, operators, widgets } from '@/lib/tochat/client'
+import { TochatApiError, isTochatConfigured, operators } from '@/lib/tochat/client'
 import { tochatUserClientForOrg } from '@/lib/tochat/org'
 import { requireOrgId } from '@/lib/api/require-org-id'
+import { widgetOwnedByOrg } from '@/lib/tochat/ownership'
+import { parseJsonBody } from '@/lib/api/parse-json-body'
 
 /**
  * GET /api/tochat/operators
@@ -50,8 +52,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ configured: false }, { status: 200 })
     }
 
-    const payload = (await request.json()) as Record<string, unknown>
-    if (!payload || typeof payload.name !== 'string' || !payload.name.trim()) {
+    const { body: payload, error: parseError } = await parseJsonBody(request)
+    if (parseError) return parseError
+    if (typeof payload.name !== 'string' || !payload.name.trim()) {
       return NextResponse.json({ error: '`name` is required' }, { status: 400 })
     }
     if (typeof payload.number !== 'string' || !payload.number.trim()) {
@@ -63,9 +66,8 @@ export async function POST(request: Request) {
 
     // The operator must attach to a widget the caller's org actually
     // owns — verify before creating, same rule as every other write.
-    const userClient = tochatUserClientForOrg(orgId)
-    const widget = await widgets.get(payload.business)
-    if (widget.userClient !== userClient) {
+    const widget = await widgetOwnedByOrg(payload.business, orgId)
+    if (!widget) {
       return NextResponse.json({ error: 'Widget not found' }, { status: 404 })
     }
 

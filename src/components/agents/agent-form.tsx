@@ -84,13 +84,17 @@ export function AgentForm({ open, onOpenChange, agent, widgets, onSaved }: Agent
       return;
     }
 
+    // null (not undefined) for cleared fields — undefined is dropped
+    // by JSON.stringify, so an omitted key can't be told apart from
+    // "leave this alone" and clearing the field wouldn't actually
+    // clear it on Tochat.
     const payload = {
       number: number.trim(),
       name: name.trim(),
       business: businessId,
-      post: post.trim() || undefined,
-      message: message.trim() || undefined,
-      iconUrl: iconUrl.trim() || undefined,
+      post: post.trim() || null,
+      message: message.trim() || null,
+      iconUrl: iconUrl.trim() || null,
       chatform,
       activateDirectlyChat,
     };
