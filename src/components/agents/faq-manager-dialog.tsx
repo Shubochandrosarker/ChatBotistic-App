@@ -45,6 +45,7 @@ export function FaqManagerDialog({ open, onOpenChange, agent }: FaqManagerDialog
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<TochatFaqGroup | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
@@ -59,6 +60,8 @@ export function FaqManagerDialog({ open, onOpenChange, agent }: FaqManagerDialog
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? 'Failed to load FAQs');
+      } else if (data.configured === false) {
+        setError('Tochat.be is not connected.');
       } else {
         setGroups(data.faqGroups ?? []);
       }
@@ -128,6 +131,10 @@ export function FaqManagerDialog({ open, onOpenChange, agent }: FaqManagerDialog
         toast.error(data.error ?? 'Failed to save FAQ group');
         return;
       }
+      if (data.configured === false) {
+        toast.error('Tochat.be is not connected.');
+        return;
+      }
       toast.success(editingId ? 'FAQ group updated' : 'FAQ group created');
       setView('list');
       load();
@@ -143,12 +150,17 @@ export function FaqManagerDialog({ open, onOpenChange, agent }: FaqManagerDialog
     setDeletingId(group.id);
     try {
       const res = await fetch(`/api/tochat/faq-groups/${group.id}`, { method: 'DELETE' });
+      const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
         toast.error(body?.error ?? 'Failed to delete FAQ group');
         return;
       }
+      if (body?.configured === false) {
+        toast.error('Tochat.be is not connected.');
+        return;
+      }
       toast.success('FAQ group deleted');
+      setPendingDelete(null);
       load();
     } finally {
       setDeletingId(null);
@@ -230,7 +242,7 @@ export function FaqManagerDialog({ open, onOpenChange, agent }: FaqManagerDialog
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        onClick={() => handleDelete(group)}
+                        onClick={() => setPendingDelete(group)}
                         disabled={deletingId === group.id}
                         className="text-destructive hover:text-destructive"
                         aria-label="Delete FAQ group"
@@ -329,6 +341,38 @@ export function FaqManagerDialog({ open, onOpenChange, agent }: FaqManagerDialog
           </DialogFooter>
         )}
       </DialogContent>
+
+      <Dialog open={!!pendingDelete} onOpenChange={(v) => !v && setPendingDelete(null)}>
+        <DialogContent className="bg-card border-border text-foreground sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Delete FAQ group</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              This permanently removes{' '}
+              <span className="text-foreground">{pendingDelete?.title}</span> from Tochat.be.
+              This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="bg-card border-border">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPendingDelete(null)}
+              className="border-border text-foreground hover:bg-muted"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => pendingDelete && handleDelete(pendingDelete)}
+              disabled={!!deletingId}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deletingId && <Loader2 className="size-4 animate-spin" />}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

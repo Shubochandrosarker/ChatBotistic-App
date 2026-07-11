@@ -78,6 +78,7 @@ export function BookingConfigDialog({ open, onOpenChange, agent }: BookingConfig
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<TochatBookingConfig | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState(todayIso());
@@ -103,6 +104,8 @@ export function BookingConfigDialog({ open, onOpenChange, agent }: BookingConfig
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? 'Failed to load booking configs');
+      } else if (data.configured === false) {
+        setError('Tochat.be is not connected.');
       } else {
         setConfigs(data.bookingConfigs ?? []);
       }
@@ -219,6 +222,10 @@ export function BookingConfigDialog({ open, onOpenChange, agent }: BookingConfig
         toast.error(data.error ?? 'Failed to save booking config');
         return;
       }
+      if (data.configured === false) {
+        toast.error('Tochat.be is not connected.');
+        return;
+      }
       toast.success(editingId ? 'Booking config updated' : 'Booking config created');
       setView('list');
       load();
@@ -234,12 +241,17 @@ export function BookingConfigDialog({ open, onOpenChange, agent }: BookingConfig
     setDeletingId(config.id);
     try {
       const res = await fetch(`/api/tochat/booking-configs/${config.id}`, { method: 'DELETE' });
+      const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
         toast.error(body?.error ?? 'Failed to delete booking config');
         return;
       }
+      if (body?.configured === false) {
+        toast.error('Tochat.be is not connected.');
+        return;
+      }
       toast.success('Booking config deleted');
+      setPendingDelete(null);
       load();
     } finally {
       setDeletingId(null);
@@ -327,7 +339,7 @@ export function BookingConfigDialog({ open, onOpenChange, agent }: BookingConfig
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        onClick={() => handleDelete(config)}
+                        onClick={() => setPendingDelete(config)}
                         disabled={deletingId === config.id}
                         className="text-destructive hover:text-destructive"
                         aria-label="Delete booking config"
@@ -571,6 +583,40 @@ export function BookingConfigDialog({ open, onOpenChange, agent }: BookingConfig
           </DialogFooter>
         )}
       </DialogContent>
+
+      <Dialog open={!!pendingDelete} onOpenChange={(v) => !v && setPendingDelete(null)}>
+        <DialogContent className="bg-card border-border text-foreground sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Delete booking config</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              This permanently removes the{' '}
+              <span className="text-foreground">
+                {pendingDelete?.startDate} → {pendingDelete?.endDate}
+              </span>{' '}
+              booking config from Tochat.be. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="bg-card border-border">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPendingDelete(null)}
+              className="border-border text-foreground hover:bg-muted"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => pendingDelete && handleDelete(pendingDelete)}
+              disabled={!!deletingId}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deletingId && <Loader2 className="size-4 animate-spin" />}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

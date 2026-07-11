@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server'
-import { TochatApiError, isTochatConfigured, faqGroups, type TochatFaq } from '@/lib/tochat/client'
+import {
+  TochatApiError,
+  isTochatConfigured,
+  faqGroups,
+  resourceIdFromIri,
+  type TochatFaq,
+} from '@/lib/tochat/client'
 import { requireOrgId } from '@/lib/api/require-org-id'
 import { faqGroupOwnedByOrg } from '@/lib/tochat/ownership'
+import { parseJsonBody } from '@/lib/api/parse-json-body'
 
 /**
  * GET /api/tochat/faq-groups/{id}
@@ -68,8 +75,9 @@ export async function PUT(
     const existing = await faqGroupOwnedByOrg(id, orgId)
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    const payload = (await request.json()) as Record<string, unknown>
-    if (!payload || typeof payload.title !== 'string' || !payload.title.trim()) {
+    const { body: payload, error: parseError } = await parseJsonBody(request)
+    if (parseError) return parseError
+    if (typeof payload.title !== 'string' || !payload.title.trim()) {
       return NextResponse.json({ error: '`title` is required' }, { status: 400 })
     }
     if (!validFaqs(payload.faqs)) {
@@ -81,9 +89,19 @@ export async function PUT(
 
     // The agent this group belongs to never changes via this route —
     // keep the existing relation regardless of what the body sends.
+    // Re-derived as a plain IRI rather than re-sent as whatever shape
+    // GET returned it in (a string IRI or an embedded {id, '@id'}
+    // object depending on Tochat's serialization group) — PUT expects
+    // the IRI form, so resending an embedded object could silently
+    // detach the group from its agent.
+    const operatorId = resourceIdFromIri(existing.whatsapp)
+    if (!operatorId) {
+      console.error('[api/tochat/faq-groups/:id] existing.whatsapp had an unrecognized shape:', existing.whatsapp)
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    }
     const updated = await faqGroups.update(id, {
       title: payload.title.trim(),
-      whatsapp: existing.whatsapp,
+      whatsapp: `/api/v2/whatsapp_operators/${operatorId}`,
       faqs: payload.faqs,
     })
 

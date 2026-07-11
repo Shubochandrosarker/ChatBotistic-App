@@ -169,10 +169,16 @@ function formFromWidget(widget?: TochatWidget | null): FormState {
   };
 }
 
-/** Trim to undefined so optional fields don't overwrite Tochat data with empty strings. */
-function opt(value: string): string | undefined {
+/**
+ * Trim to `null` (not `undefined`) for optional fields. A PUT body is
+ * JSON — `undefined` values are dropped by `JSON.stringify`, so an
+ * omitted key can't be told apart from "leave this alone," and
+ * clearing a field in the form would silently fail to clear it on
+ * Tochat. An explicit `null` says "empty" unambiguously either way.
+ */
+function opt(value: string): string | null {
   const trimmed = value.trim();
-  return trimmed ? trimmed : undefined;
+  return trimmed ? trimmed : null;
 }
 
 function toPayload(form: FormState): Record<string, unknown> {
@@ -183,7 +189,7 @@ function toPayload(form: FormState): Record<string, unknown> {
     rightpos: form.rightpos,
     isopen: form.isopen,
     theme: Number(form.theme) || 1,
-    zIndex: form.zIndex.trim() ? Number(form.zIndex) : undefined,
+    zIndex: form.zIndex.trim() ? Number(form.zIndex) : null,
     iconUrl: opt(form.iconUrl),
     whatsappIconUrl: opt(form.whatsappIconUrl),
     backgroundImageUrl: opt(form.backgroundImageUrl),

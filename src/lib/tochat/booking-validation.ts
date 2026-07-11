@@ -4,23 +4,32 @@ const WEEKDAYS: TochatWeekday[] = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SU
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
-function validBookingTimes(value: unknown): value is TochatBookingTime[] {
-  return (
-    Array.isArray(value) &&
-    value.length > 0 &&
-    value.every((t) => {
-      const row = t as Partial<TochatBookingTime>
-      return (
-        row &&
-        typeof row === 'object' &&
-        WEEKDAYS.includes(row.day as TochatWeekday) &&
-        typeof row.availableFrom === 'string' &&
-        TIME_RE.test(row.availableFrom) &&
-        typeof row.availableUntil === 'string' &&
-        TIME_RE.test(row.availableUntil)
-      )
-    })
-  )
+// YYYY-MM-DD and HH:MM strings sort lexicographically in chronological
+// order, so plain string comparison is enough for the ordering checks
+// below — no Date parsing (and its timezone footguns) needed.
+
+function bookingTimesError(value: unknown): string | null {
+  if (!Array.isArray(value) || value.length === 0) {
+    return 'At least one valid `bookingTimes` entry ({ day, availableFrom, availableUntil }) is required'
+  }
+  for (const t of value as unknown[]) {
+    const row = t as Partial<TochatBookingTime>
+    if (
+      !row ||
+      typeof row !== 'object' ||
+      !WEEKDAYS.includes(row.day as TochatWeekday) ||
+      typeof row.availableFrom !== 'string' ||
+      !TIME_RE.test(row.availableFrom) ||
+      typeof row.availableUntil !== 'string' ||
+      !TIME_RE.test(row.availableUntil)
+    ) {
+      return 'At least one valid `bookingTimes` entry ({ day, availableFrom, availableUntil }) is required'
+    }
+    if (row.availableUntil <= row.availableFrom) {
+      return `\`bookingTimes\` window for ${row.day} must end after it starts (${row.availableFrom}–${row.availableUntil})`
+    }
+  }
+  return null
 }
 
 /** Validates the fields a booking config create/update body must have in common. Returns an error message, or null when valid. */
@@ -31,15 +40,32 @@ export function validateBookingConfigPayload(payload: Record<string, unknown>): 
   if (typeof payload.endDate !== 'string' || !DATE_RE.test(payload.endDate)) {
     return '`endDate` must be an ISO date (YYYY-MM-DD)'
   }
+  if (payload.endDate < payload.startDate) {
+    return '`endDate` must be on or after `startDate`'
+  }
   if (typeof payload.duration !== 'number' || payload.duration <= 0) {
     return '`duration` must be a positive number of minutes'
+  }
+  if (payload.breakTime != null && (typeof payload.breakTime !== 'number' || payload.breakTime < 0)) {
+    return '`breakTime` must be zero or a positive number of minutes'
+  }
+  if (
+    payload.availablePlacePerSlot != null &&
+    (typeof payload.availablePlacePerSlot !== 'number' || payload.availablePlacePerSlot < 1)
+  ) {
+    return '`availablePlacePerSlot` must be at least 1'
+  }
+  if (
+    payload.allowedHourUntilBooking != null &&
+    (typeof payload.allowedHourUntilBooking !== 'number' || payload.allowedHourUntilBooking < 0)
+  ) {
+    return '`allowedHourUntilBooking` must be zero or a positive number of hours'
   }
   if (typeof payload.timezone !== 'string' || !payload.timezone.trim()) {
     return '`timezone` is required, e.g. "Europe/Madrid"'
   }
-  if (!validBookingTimes(payload.bookingTimes)) {
-    return 'At least one valid `bookingTimes` entry ({ day, availableFrom, availableUntil }) is required'
-  }
+  const bookingTimesErr = bookingTimesError(payload.bookingTimes)
+  if (bookingTimesErr) return bookingTimesErr
   if (payload.blockingDays != null) {
     if (
       !Array.isArray(payload.blockingDays) ||

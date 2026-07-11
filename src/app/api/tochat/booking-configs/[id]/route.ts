@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server'
-import { TochatApiError, isTochatConfigured, bookingConfigs } from '@/lib/tochat/client'
+import {
+  TochatApiError,
+  isTochatConfigured,
+  bookingConfigs,
+  resourceIdFromIri,
+} from '@/lib/tochat/client'
 import { requireOrgId } from '@/lib/api/require-org-id'
 import { bookingConfigOwnedByOrg } from '@/lib/tochat/ownership'
+import { parseJsonBody } from '@/lib/api/parse-json-body'
 import {
   validateBookingConfigPayload,
   normalizeBookingConfigPayload,
@@ -56,15 +62,24 @@ export async function PUT(
     const existing = await bookingConfigOwnedByOrg(id, orgId)
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    const payload = (await request.json()) as Record<string, unknown>
+    const { body: payload, error: parseError } = await parseJsonBody(request)
+    if (parseError) return parseError
     const validationError = validateBookingConfigPayload(payload)
     if (validationError) {
       return NextResponse.json({ error: validationError }, { status: 400 })
     }
 
-    // The agent this config belongs to never changes via this route.
+    // The agent this config belongs to never changes via this route —
+    // re-derived as a plain IRI rather than re-sent as whatever shape
+    // GET returned it in (see the identical note in
+    // faq-groups/[id]/route.ts).
+    const operatorId = resourceIdFromIri(existing.whatsapp)
+    if (!operatorId) {
+      console.error('[api/tochat/booking-configs/:id] existing.whatsapp had an unrecognized shape:', existing.whatsapp)
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    }
     const updated = await bookingConfigs.update(id, {
-      whatsapp: existing.whatsapp,
+      whatsapp: `/api/v2/whatsapp_operators/${operatorId}`,
       ...normalizeBookingConfigPayload(payload),
     })
 
