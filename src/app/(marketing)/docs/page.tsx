@@ -176,6 +176,7 @@ const navGroups: DocsNavGroup[] = [
       { id: "templates", label: "Templates" },
       { id: "media", label: "Media" },
       { id: "leads", label: "Leads" },
+      { id: "tochat-widgets", label: "Tochat widgets" },
       { id: "automations", label: "Automations" },
       { id: "knowledge-base", label: "AI knowledge base" },
     ],
@@ -534,6 +535,32 @@ export default function DocsPage() {
             </Endpoint>
           </Section>
 
+          {/* ── Tochat widgets ──────────────────────────────────── */}
+          <Section
+            id="tochat-widgets"
+            title="Tochat widgets"
+            lead="Org-scoped proxy to the Tochat.be widget API — the first slice of Widget Studio. Requires the master Tochat.be account (TOCHAT_API_EMAIL / TOCHAT_API_PASSWORD) to be configured; this is a separate integration from the Leads sync above, which only reads the lead-export feed."
+          >
+            <Endpoint method="GET" path="/api/tochat/widgets">
+              <p>List the signed-in org&apos;s widgets.</p>
+            </Endpoint>
+            <Endpoint method="POST" path="/api/tochat/widgets">
+              <ParamsTable
+                params={[
+                  { name: "name", type: "string", required: true, description: "Widget name." },
+                  { name: "color", type: "string", description: "Hex brand color, e.g. #27d974." },
+                  { name: "widgetMessage", type: "string", description: "Greeting shown in the chat bubble." },
+                  { name: "iconUrl", type: "string", description: "Launcher icon URL." },
+                ]}
+              />
+              <p>
+                Additional Tochat widget fields (banners, landing colors,
+                translations, targeting) are passed through as-is — see the
+                Tochat.be API reference for the full schema.
+              </p>
+            </Endpoint>
+          </Section>
+
           {/* ── Automations ─────────────────────────────────────── */}
           <Section
             id="automations"
@@ -748,6 +775,8 @@ export default function DocsPage() {
                 { name: "SSO_MAX_SKEW_SECONDS", type: "number", description: "Token freshness window (default 300)." },
                 { name: "CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN", type: "string", description: "Enable Workers-AI embeddings + drafts." },
                 { name: "CHATBOTISTIC_API_URL / CHATBOTISTIC_API_KEY", type: "string", description: "Enable the leads integration." },
+                { name: "TOCHAT_API_EMAIL / TOCHAT_API_PASSWORD", type: "string", description: "Master Tochat.be account — enables Widget Studio (widgets/agents/bookings/campaigns)." },
+                { name: "TOCHAT_API_BASE", type: "string", description: "Override the Tochat.be API origin (default https://services.tochat.be)." },
               ]}
             />
           </Section>
