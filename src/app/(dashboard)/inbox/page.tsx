@@ -50,10 +50,14 @@ export default function InboxPage() {
 
       // Table is `whatsapp_config` (singular) — the previous "whatsapp_configs"
       // query always returned no rows, so the banner always showed "not connected".
+      // whatsapp_config is org-scoped (not per-user) — RLS already
+      // restricts this to the caller's org, so no explicit filter is
+      // needed. Filtering by user_id here previously meant a teammate
+      // who didn't personally run the setup wizard always saw "not
+      // connected", even with a live org WhatsApp connection.
       const { data } = await supabase
         .from("whatsapp_config")
         .select("status")
-        .eq("user_id", user.id)
         .maybeSingle();
 
       setWhatsappConnected(data?.status === "connected");

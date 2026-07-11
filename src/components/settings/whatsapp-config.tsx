@@ -92,13 +92,16 @@ export function WhatsAppConfig() {
     typeof window !== 'undefined' ? `${window.location.origin}${webhookPath}` : '';
 
   const fetchConfig = useCallback(
-    async (userId: string) => {
+    async () => {
       setLoading(true);
       try {
+        // whatsapp_config is org-scoped — RLS already restricts this
+        // to the caller's org, so no user_id filter is needed (and
+        // filtering by it meant a teammate other than whoever ran
+        // setup always saw an empty form).
         const { data, error } = await supabase
           .from('whatsapp_config')
           .select('*')
-          .eq('user_id', userId)
           .maybeSingle();
 
         if (error) {
@@ -205,7 +208,7 @@ export function WhatsAppConfig() {
       setLoading(false);
       return;
     }
-    fetchConfig(user.id);
+    fetchConfig();
   }, [authLoading, user, fetchConfig]);
 
   async function handleSave() {
@@ -306,7 +309,7 @@ export function WhatsAppConfig() {
             complianceData.error ||
               'Configuration saved, but compliance settings failed to save'
           );
-          if (user) await fetchConfig(user.id);
+          if (user) await fetchConfig();
           setSaving(false);
           return;
         }
@@ -318,7 +321,7 @@ export function WhatsAppConfig() {
           : 'Configuration saved successfully'
       );
 
-      if (user) await fetchConfig(user.id);
+      if (user) await fetchConfig();
     } catch (err) {
       console.error('Save error:', err);
       toast.error('Failed to save configuration');

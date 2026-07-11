@@ -67,6 +67,8 @@ export async function proxy(request: NextRequest) {
     '/broadcasts',
     '/automations',
     '/settings',
+    '/leads',
+    '/knowledge-base',
   ];
   if (
     !user &&

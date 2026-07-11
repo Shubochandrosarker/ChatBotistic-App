@@ -52,12 +52,14 @@ export default function NewBroadcastPage() {
         const {
           data: { session },
         } = await supabase.auth.getSession();
-        const uid = session?.user?.id;
-        if (uid) {
+        if (session?.user) {
+          // whatsapp_config is org-scoped — RLS already restricts
+          // this to the caller's org, so no user_id filter is needed
+          // (filtering by it meant a teammate who didn't personally
+          // connect the gateway never got redirected to the SMS flow).
           const { data } = await supabase
             .from('whatsapp_config')
             .select('provider')
-            .eq('user_id', uid)
             .maybeSingle();
           if (data?.provider === 'jasmin') {
             router.replace('/broadcasts/new-sms');

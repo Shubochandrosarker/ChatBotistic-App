@@ -40,10 +40,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // whatsapp_config is org-scoped, not per-user — RLS already
+    // restricts this to the caller's org. Filtering by user_id here
+    // meant a teammate other than whoever ran the setup wizard always
+    // saw "no configuration saved yet."
     const { data: config, error: configError } = await supabase
       .from('whatsapp_config')
       .select('*')
-      .eq('user_id', user.id)
       .maybeSingle()
 
     if (configError) {
@@ -153,7 +156,6 @@ export async function POST(request: Request) {
     const { data: existing } = await supabase
       .from('whatsapp_config')
       .select('id')
-      .eq('user_id', user.id)
       .maybeSingle()
 
     if (provider === 'twilio') {
@@ -234,6 +236,10 @@ async function saveMetaConfig(
     status: 'connected' as const,
   }
 
+  // whatsapp_config is org-scoped (one row per org) — RLS already
+  // restricts the update to the caller's org, so no user_id filter is
+  // needed (and filtering by it meant only the connecting user could
+  // ever update their own org's config).
   const result = existingId
     ? await supabase
         .from('whatsapp_config')
@@ -242,7 +248,6 @@ async function saveMetaConfig(
           connected_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
-        .eq('user_id', userId)
     : await supabase
         .from('whatsapp_config')
         .insert({ ...row, user_id: userId, connected_at: new Date().toISOString() })
@@ -336,6 +341,8 @@ async function saveTwilioConfig(
     status: 'connected' as const,
   }
 
+  // whatsapp_config is org-scoped (one row per org) — RLS already
+  // restricts the update to the caller's org.
   const result = existingId
     ? await supabase
         .from('whatsapp_config')
@@ -344,7 +351,6 @@ async function saveTwilioConfig(
           connected_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
-        .eq('user_id', userId)
     : await supabase
         .from('whatsapp_config')
         .insert({ ...row, user_id: userId, connected_at: new Date().toISOString() })
@@ -453,6 +459,8 @@ async function saveJasminConfig(
     status: 'connected' as const,
   }
 
+  // whatsapp_config is org-scoped (one row per org) — RLS already
+  // restricts the update to the caller's org.
   const result = existingId
     ? await supabase
         .from('whatsapp_config')
@@ -461,7 +469,6 @@ async function saveJasminConfig(
           connected_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
-        .eq('user_id', userId)
     : await supabase
         .from('whatsapp_config')
         .insert({ ...row, user_id: userId, connected_at: new Date().toISOString() })
@@ -576,10 +583,11 @@ export async function PATCH(request: Request) {
     }
     update.updated_at = new Date().toISOString()
 
+    // whatsapp_config is org-scoped — RLS already restricts this to
+    // the caller's org.
     const { data: updated, error: updateError } = await supabase
       .from('whatsapp_config')
       .update(update)
-      .eq('user_id', user.id)
       .select('id')
       .maybeSingle()
 
@@ -624,10 +632,11 @@ export async function DELETE() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // whatsapp_config is org-scoped — RLS already restricts this to
+    // the caller's org.
     const { error: deleteError } = await supabase
       .from('whatsapp_config')
       .delete()
-      .eq('user_id', user.id)
 
     if (deleteError) {
       console.error('Error deleting whatsapp_config:', deleteError)
