@@ -10,10 +10,12 @@ import {
   widgets,
   operators,
   faqGroups,
+  bookingConfigs,
   resourceIdFromIri,
   type TochatWidget,
   type TochatOperator,
   type TochatFaqGroup,
+  type TochatBookingConfig,
 } from './client'
 import { tochatUserClientForOrg } from './org'
 
@@ -43,4 +45,15 @@ export async function faqGroupOwnedByOrg(
   if (!operatorId) return null
   const operator = await operatorOwnedByOrg(operatorId, orgId)
   return operator ? group : null
+}
+
+export async function bookingConfigOwnedByOrg(
+  bookingConfigId: string,
+  orgId: string,
+): Promise<TochatBookingConfig | null> {
+  const config = (await bookingConfigs.get(bookingConfigId)) as TochatBookingConfig
+  const operatorId = resourceIdFromIri(config.whatsapp)
+  if (!operatorId) return null
+  const operator = await operatorOwnedByOrg(operatorId, orgId)
+  return operator ? config : null
 }
