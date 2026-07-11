@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
+  HelpCircle,
   Loader2,
   MoreVertical,
   Pencil,
@@ -28,6 +29,7 @@ import {
 } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { AgentForm } from '@/components/agents/agent-form';
+import { FaqManagerDialog } from '@/components/agents/faq-manager-dialog';
 import { resourceIdFromIri, type TochatOperator, type TochatWidget } from '@/lib/tochat/client';
 
 interface OperatorsResponse {
@@ -52,6 +54,7 @@ export default function AgentsPage() {
   const [editAgent, setEditAgent] = useState<TochatOperator | null>(null);
   const [pendingDelete, setPendingDelete] = useState<TochatOperator | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [faqAgent, setFaqAgent] = useState<TochatOperator | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -189,6 +192,10 @@ export default function AgentsPage() {
                     <MoreVertical className="h-4 w-4" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setFaqAgent(agent)}>
+                      <HelpCircle className="size-4" />
+                      Manage FAQs
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
                         setEditAgent(agent);
@@ -230,6 +237,12 @@ export default function AgentsPage() {
         agent={editAgent}
         widgets={widgets}
         onSaved={load}
+      />
+
+      <FaqManagerDialog
+        open={!!faqAgent}
+        onOpenChange={(v) => !v && setFaqAgent(null)}
+        agent={faqAgent}
       />
 
       <Dialog

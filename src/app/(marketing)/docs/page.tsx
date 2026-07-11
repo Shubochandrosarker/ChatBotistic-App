@@ -179,6 +179,7 @@ const navGroups: DocsNavGroup[] = [
       { id: "leads", label: "Leads" },
       { id: "tochat-widgets", label: "Tochat widgets" },
       { id: "tochat-agents", label: "Tochat agents" },
+      { id: "tochat-faq-groups", label: "Tochat FAQ groups" },
       { id: "automations", label: "Automations" },
       { id: "knowledge-base", label: "AI knowledge base" },
     ],
@@ -634,6 +635,41 @@ export default function DocsPage() {
             </Endpoint>
             <Endpoint method="DELETE" path="/api/tochat/operators/{id}">
               <p>Delete an agent, after the same ownership check.</p>
+            </Endpoint>
+          </Section>
+
+          {/* ── Tochat FAQ groups ───────────────────────────────── */}
+          <Section
+            id="tochat-faq-groups"
+            title="Tochat FAQ groups"
+            lead="Frequently asked questions an agent answers automatically. Every FAQ group belongs to exactly one agent, which belongs to exactly one widget."
+          >
+            <Endpoint method="GET" path="/api/tochat/faq-groups?operatorId={id}">
+              <p>
+                List the FAQ groups for one agent.{" "}
+                <code className="font-mono text-[13px]">operatorId</code> is
+                required — ownership is verified two levels removed (agent →
+                widget → <code className="font-mono text-[13px]">userClient</code>)
+                before anything is returned.
+              </p>
+            </Endpoint>
+            <Endpoint method="POST" path="/api/tochat/faq-groups">
+              <ParamsTable
+                params={[
+                  { name: "title", type: "string", required: true, description: "Group heading, e.g. \"Frequently asked questions\"." },
+                  { name: "operatorId", type: "string", required: true, description: "The agent this group belongs to — must belong to the caller's org." },
+                  { name: "faqs", type: "{ question, answer }[]", required: true, description: "At least one question/answer pair." },
+                ]}
+              />
+            </Endpoint>
+            <Endpoint method="GET" path="/api/tochat/faq-groups/{id}">
+              <p>Fetch a single FAQ group.</p>
+            </Endpoint>
+            <Endpoint method="PUT" path="/api/tochat/faq-groups/{id}">
+              <p>Replace a group&apos;s title and questions. The agent it belongs to can&apos;t be changed via this route.</p>
+            </Endpoint>
+            <Endpoint method="DELETE" path="/api/tochat/faq-groups/{id}">
+              <p>Delete a FAQ group, after the same ownership check.</p>
             </Endpoint>
           </Section>
 
