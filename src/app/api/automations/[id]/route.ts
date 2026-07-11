@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
+import { resolveOrgId } from '@/lib/supabase/org'
 import {
   loadStepsTree,
   replaceSteps,
@@ -11,12 +12,17 @@ import {
   validateTriggerForActivation,
 } from '@/lib/automations/validate'
 
-async function requireUser() {
+// Automations are org-scoped (any teammate can see/edit any automation
+// in their org — see docs/dashboard-bug-audit-2026-07-11.md #2), so
+// every admin-client lookup below must filter by org_id, not the
+// caller's own user_id.
+async function requireOrg() {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  return user
+  if (!user) return null
+  return resolveOrgId(supabase)
 }
 
 export async function GET(
@@ -24,15 +30,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
-  const user = await requireUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const orgId = await requireOrg()
+  if (!orgId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = supabaseAdmin()
   const { data: automation, error } = await admin
     .from('automations')
     .select('*')
     .eq('id', id)
-    .eq('user_id', user.id)
+    .eq('org_id', orgId)
     .maybeSingle()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -47,8 +53,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
-  const user = await requireUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const orgId = await requireOrg()
+  if (!orgId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json().catch(() => null)
   if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
@@ -59,10 +65,10 @@ export async function PATCH(
   // to compute the post-patch "effective" state for validation.
   const { data: existing } = await admin
     .from('automations')
-    .select('id, user_id, is_active, trigger_type, trigger_config')
+    .select('id, org_id, is_active, trigger_type, trigger_config')
     .eq('id', id)
     .maybeSingle()
-  if (!existing || existing.user_id !== user.id) {
+  if (!existing || existing.org_id !== orgId) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
@@ -125,14 +131,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
-  const user = await requireUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const orgId = await requireOrg()
+  if (!orgId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { error } = await supabaseAdmin()
     .from('automations')
     .delete()
     .eq('id', id)
-    .eq('user_id', user.id)
+    .eq('org_id', orgId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

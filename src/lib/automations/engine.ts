@@ -15,9 +15,11 @@ import type {
   CreateDealStepConfig,
   AssignConversationStepConfig,
 } from '@/types'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { supabaseAdmin } from './admin-client'
 import { engineSendText, engineSendTemplate } from './meta-send'
 import { generateRagAnswer } from '@/lib/ai/rag'
+import { primaryOrgIdForUser } from '@/lib/supabase/org'
 
 // ------------------------------------------------------------
 // Public API
@@ -53,10 +55,22 @@ export interface DispatchInput {
 export async function runAutomationsForTrigger(input: DispatchInput): Promise<void> {
   try {
     const db = supabaseAdmin()
+
+    // Automations are org-scoped, not user-scoped: a teammate's
+    // automation must fire even when a *different* teammate is the
+    // one whose whatsapp_config connection triggered this dispatch.
+    // input.userId only identifies which connection fired; resolve
+    // its org before matching automations.
+    const orgId = await primaryOrgIdForUser(db, input.userId)
+    if (!orgId) {
+      console.error('[automations] no org found for user:', input.userId)
+      return
+    }
+
     const { data: automations, error } = await db
       .from('automations')
       .select('*')
-      .eq('user_id', input.userId)
+      .eq('org_id', orgId)
       .eq('trigger_type', input.triggerType)
       .eq('is_active', true)
 
@@ -296,6 +310,44 @@ async function executeStepsFrom(args: ExecuteArgs): Promise<void> {
   }
 }
 
+/**
+ * Pick the org teammate with the fewest currently open/pending
+ * conversations assigned to them — a self-balancing round robin that
+ * needs no extra "last assigned" state to track. This used to always
+ * resolve to the automation's own creator (a query for a single
+ * profile filtered by that exact user_id), so "round robin" never
+ * actually rotated across a team; falls back to the automation's
+ * creator when the org has no other members to rotate through.
+ */
+async function pickRoundRobinAgent(
+  db: SupabaseClient,
+  automationUserId: string,
+): Promise<string | undefined> {
+  const orgId = await primaryOrgIdForUser(db, automationUserId)
+  if (!orgId) return automationUserId
+
+  const { data: members } = await db.from('org_members').select('user_id').eq('org_id', orgId)
+  const candidates = (members ?? []).map((m) => m.user_id as string)
+  if (candidates.length <= 1) return candidates[0] ?? automationUserId
+
+  const { data: assigned } = await db
+    .from('conversations')
+    .select('assigned_agent_id')
+    .eq('org_id', orgId)
+    .in('status', ['open', 'pending'])
+    .in('assigned_agent_id', candidates)
+
+  const load = new Map<string, number>(candidates.map((id) => [id, 0]))
+  for (const row of assigned ?? []) {
+    const id = row.assigned_agent_id as string | null
+    if (id && load.has(id)) load.set(id, (load.get(id) ?? 0) + 1)
+  }
+
+  return candidates.reduce((least, id) =>
+    (load.get(id) ?? 0) < (load.get(least) ?? 0) ? id : least,
+  )
+}
+
 async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string> {
   const db = supabaseAdmin()
 
@@ -412,12 +464,7 @@ async function runStep(step: AutomationStep, args: ExecuteArgs): Promise<string>
       if (!args.contactId) throw new Error('assign_conversation needs a contact')
       let agentId = cfg.agent_id
       if (cfg.mode === 'round_robin') {
-        const { data: profiles } = await db
-          .from('profiles')
-          .select('user_id')
-          .eq('user_id', args.automation.user_id)
-          .limit(1)
-        agentId = profiles?.[0]?.user_id
+        agentId = await pickRoundRobinAgent(db, args.automation.user_id)
       }
       if (!agentId) return 'no agent resolved'
       await db

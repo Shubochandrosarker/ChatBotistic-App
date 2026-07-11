@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { TochatApiError, isTochatConfigured, widgets } from '@/lib/tochat/client'
 import { tochatUserClientForOrg } from '@/lib/tochat/org'
+import { requireOrgId } from '@/lib/api/require-org-id'
 
 /**
  * GET /api/tochat/widgets
@@ -18,38 +18,6 @@ import { tochatUserClientForOrg } from '@/lib/tochat/org'
  *   { configured: true, widget: {...} }       — POST
  *   { error: '...' }                          — on failure
  */
-async function requireOrgId(): Promise<
-  { orgId: string; error: null } | { orgId: null; error: NextResponse }
-> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return { orgId: null, error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-  }
-
-  // RLS scopes this to orgs the caller belongs to — no explicit
-  // user_id/org_id filter needed (see docs/dashboard-bug-audit-2026-07-11.md
-  // for why several other routes get this wrong).
-  const { data: org, error: orgError } = await supabase
-    .from('organizations')
-    .select('id')
-    .limit(1)
-    .maybeSingle()
-
-  if (orgError || !org) {
-    return {
-      orgId: null,
-      error: NextResponse.json({ error: 'No organization for this account' }, { status: 404 }),
-    }
-  }
-
-  return { orgId: org.id as string, error: null }
-}
-
 export async function GET() {
   try {
     const { orgId, error } = await requireOrgId()

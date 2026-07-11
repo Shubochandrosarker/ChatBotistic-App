@@ -50,18 +50,21 @@ export function TagManager() {
       setLoading(false);
       return;
     }
-    fetchTags(user.id);
+    fetchTags();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user?.id]);
 
-  async function fetchTags(userId: string) {
+  async function fetchTags() {
     try {
       setLoading(true);
 
+      // tags is org-scoped — RLS already restricts this to the
+      // caller's org, so no user_id filter is needed (and filtering
+      // by it meant a teammate saw an empty list for tags a colleague
+      // created).
       const { data, error } = await supabase
         .from('tags')
         .select('*')
-        .eq('user_id', userId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -101,7 +104,7 @@ export function TagManager() {
       setDialogOpen(false);
       setNewTagName('');
       setSelectedColor(PRESET_COLORS[3].value);
-      if (user) await fetchTags(user.id);
+      await fetchTags();
     } catch (err) {
       console.error('Create error:', err);
       toast.error('Failed to create tag');

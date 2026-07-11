@@ -56,7 +56,8 @@ export function ContactForm({
       setSelectedTagIds(contactTags.map((ct) => ct.tag_id));
       fetchTags();
     }
-  }, [open, contact]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, contact, contactTags]);
 
   async function fetchTags() {
     setLoadingTags(true);

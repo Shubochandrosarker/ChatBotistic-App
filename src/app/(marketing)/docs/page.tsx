@@ -13,11 +13,12 @@ export const metadata: Metadata = {
 /* Local building blocks                                               */
 /* ------------------------------------------------------------------ */
 
-type Method = "GET" | "POST" | "PATCH" | "DELETE";
+type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 const methodTone: Record<Method, string> = {
   GET: "bg-[oklch(0.62_0.17_250)]/12 text-[oklch(0.48_0.17_250)] dark:text-[oklch(0.72_0.15_250)]",
   POST: "bg-success/12 text-success",
+  PUT: "bg-warning/15 text-warning",
   PATCH: "bg-warning/15 text-warning",
   DELETE: "bg-destructive/10 text-destructive",
 };
@@ -177,6 +178,7 @@ const navGroups: DocsNavGroup[] = [
       { id: "media", label: "Media" },
       { id: "leads", label: "Leads" },
       { id: "tochat-widgets", label: "Tochat widgets" },
+      { id: "tochat-agents", label: "Tochat agents" },
       { id: "automations", label: "Automations" },
       { id: "knowledge-base", label: "AI knowledge base" },
     ],
@@ -548,16 +550,80 @@ export default function DocsPage() {
               <ParamsTable
                 params={[
                   { name: "name", type: "string", required: true, description: "Widget name." },
+                  { name: "active", type: "boolean", description: "Whether the widget is live." },
                   { name: "color", type: "string", description: "Hex brand color, e.g. #27d974." },
+                  { name: "rightpos", type: "boolean", description: "true = right side, false = left side." },
+                  { name: "isopen", type: "boolean", description: "Auto-open the chat window on load." },
                   { name: "widgetMessage", type: "string", description: "Greeting shown in the chat bubble." },
+                  { name: "buttonMessage", type: "string", description: "Send-button label." },
+                  { name: "offlineMessage", type: "string", description: "Shown when no agent is online." },
                   { name: "iconUrl", type: "string", description: "Launcher icon URL." },
                 ]}
               />
               <p>
                 Additional Tochat widget fields (banners, landing colors,
-                translations, targeting) are passed through as-is — see the
-                Tochat.be API reference for the full schema.
+                translations, targeting rules) are passed through as-is —
+                see the Tochat.be API reference for the full schema. The
+                Widget Studio UI at{" "}
+                <code className="font-mono text-[13px]">/widgets</code>{" "}
+                currently manages the field set above.
               </p>
+            </Endpoint>
+            <Endpoint method="GET" path="/api/tochat/widgets/{id}">
+              <p>Fetch a single widget owned by the caller&apos;s org.</p>
+            </Endpoint>
+            <Endpoint method="PUT" path="/api/tochat/widgets/{id}">
+              <p>
+                Replace a widget&apos;s fields (same body shape as create).
+                Re-verifies the widget&apos;s{" "}
+                <code className="font-mono text-[13px]">userClient</code> tag
+                matches the caller&apos;s org before writing — Tochat.be is a
+                single shared master account across every org on this
+                platform, so widget ids alone don&apos;t prove ownership.
+              </p>
+            </Endpoint>
+            <Endpoint method="DELETE" path="/api/tochat/widgets/{id}">
+              <p>Delete a widget, after the same ownership check.</p>
+            </Endpoint>
+          </Section>
+
+          {/* ── Tochat agents ───────────────────────────────────── */}
+          <Section
+            id="tochat-agents"
+            title="Tochat agents"
+            lead="WhatsApp operators (agents) — each one attaches to exactly one widget. Same Tochat.be integration as widgets above; requires TOCHAT_API_EMAIL / TOCHAT_API_PASSWORD."
+          >
+            <Endpoint method="GET" path="/api/tochat/operators">
+              <p>List every agent across the signed-in org&apos;s widgets.</p>
+            </Endpoint>
+            <Endpoint method="POST" path="/api/tochat/operators">
+              <ParamsTable
+                params={[
+                  { name: "name", type: "string", required: true, description: "Agent display name." },
+                  { name: "number", type: "string", required: true, description: "WhatsApp number, e.g. 34627524218." },
+                  { name: "business", type: "string", required: true, description: "The widget id this agent attaches to — must belong to the caller's org." },
+                  { name: "post", type: "string", description: "Job title, e.g. \"Sales\"." },
+                  { name: "message", type: "string", description: "Greeting shown before the chat opens." },
+                  { name: "iconUrl", type: "string", description: "Agent avatar URL." },
+                  { name: "chatform", type: "boolean", description: "Collect a lead-capture form before opening WhatsApp." },
+                  { name: "activateDirectlyChat", type: "boolean", description: "Skip the agent picker when this is the preferred agent." },
+                ]}
+              />
+              <p>
+                <code className="font-mono text-[13px]">business</code> is a
+                plain widget id here, not the raw Tochat.be IRI — this route
+                translates between them and verifies the target widget
+                belongs to your org before attaching the agent.
+              </p>
+            </Endpoint>
+            <Endpoint method="GET" path="/api/tochat/operators/{id}">
+              <p>Fetch a single agent. Ownership is verified one level removed — via its parent widget&apos;s <code className="font-mono text-[13px]">userClient</code> tag.</p>
+            </Endpoint>
+            <Endpoint method="PUT" path="/api/tochat/operators/{id}">
+              <p>Update an agent, optionally re-attaching it to a different widget (re-verified the same way).</p>
+            </Endpoint>
+            <Endpoint method="DELETE" path="/api/tochat/operators/{id}">
+              <p>Delete an agent, after the same ownership check.</p>
             </Endpoint>
           </Section>
 

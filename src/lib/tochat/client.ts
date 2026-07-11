@@ -200,6 +200,69 @@ function qs(params: Record<string, string | number | string[]>): string {
 
 export type TochatResource = Record<string, unknown>
 
+/**
+ * The Widget Studio v1 field set — the subset of the full Tochat
+ * widget schema (see the Postman collection / services.tochat.be API
+ * docs for the complete ~30-field shape, including banners, landing
+ * page copy, translations, and targeting rules) that's exposed in
+ * this app's UI today. Extra fields on a real widget response are
+ * preserved and round-tripped by `TochatResource` — this interface
+ * only documents what the dashboard reads and writes.
+ */
+export interface TochatWidget extends TochatResource {
+  id?: string
+  '@id'?: string
+  name: string
+  active?: boolean
+  color?: string
+  rightpos?: boolean
+  isopen?: boolean
+  widgetMessage?: string
+  buttonMessage?: string
+  offlineMessage?: string
+  iconUrl?: string
+  userClient?: string
+}
+
+/**
+ * The Agent Manager v1 field set — a WhatsApp operator attached to one
+ * widget (`business`, an IRI like `/api/v2/widgets/{id}` on write, an
+ * IRI string or embedded object on read depending on the API's
+ * serialization group). The full schema also includes a nested
+ * `form.items[]` lead-capture form builder, `sequence` (display
+ * order), and lead-notification email fields — not in the v1 UI yet.
+ */
+export interface TochatOperator extends TochatResource {
+  id?: string
+  '@id'?: string
+  number: string
+  name: string
+  business: string | { id?: string; '@id'?: string }
+  post?: string
+  message?: string
+  iconUrl?: string
+  chatform?: boolean
+  activateDirectlyChat?: boolean
+}
+
+/**
+ * Resolve the widget id a `business` relation (IRI string or embedded
+ * object, per Hydra's serialization) points at. Returns null when the
+ * shape is unrecognized rather than throwing — callers treat that as
+ * "can't verify ownership, deny."
+ */
+export function resourceIdFromIri(value: unknown): string | null {
+  if (typeof value === 'string') {
+    return value.replace(/\/+$/, '').split('/').pop() || null
+  }
+  if (value && typeof value === 'object') {
+    const obj = value as Record<string, unknown>
+    if (typeof obj.id === 'string') return obj.id
+    if (typeof obj['@id'] === 'string') return resourceIdFromIri(obj['@id'])
+  }
+  return null
+}
+
 // ---- Widgets ------------------------------------------------------------
 
 export const widgets = {

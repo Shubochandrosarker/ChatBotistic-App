@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/automations/admin-client'
+import { resolveOrgId } from '@/lib/supabase/org'
 
 export async function POST(
   _request: Request,
@@ -12,13 +13,17 @@ export async function POST(
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const orgId = await resolveOrgId(supabase)
+  if (!orgId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = supabaseAdmin()
+  // Automations are org-scoped — a teammate can duplicate any
+  // automation in their org, not just their own.
   const { data: original, error: origErr } = await admin
     .from('automations')
     .select('*')
     .eq('id', id)
-    .eq('user_id', user.id)
+    .eq('org_id', orgId)
     .maybeSingle()
   if (origErr) return NextResponse.json({ error: origErr.message }, { status: 500 })
   if (!original) return NextResponse.json({ error: 'Not found' }, { status: 404 })

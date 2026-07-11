@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import type { Contact, Deal, ContactNote, Tag } from "@/types";
@@ -93,18 +94,25 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
       data: { session },
     } = await supabase.auth.getSession();
     const user = session?.user;
+    if (!user) {
+      toast.error("Not authenticated");
+      setAddingNote(false);
+      return;
+    }
 
     const { data, error } = await supabase
       .from("contact_notes")
       .insert({
         contact_id: contact.id,
-        user_id: user?.id,
+        user_id: user.id,
         note_text: newNote.trim(),
       })
       .select()
       .single();
 
-    if (!error && data) {
+    if (error || !data) {
+      toast.error("Failed to add note");
+    } else {
       setNotes((prev) => [data, ...prev]);
       setNewNote("");
     }

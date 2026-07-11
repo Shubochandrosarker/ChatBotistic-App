@@ -28,9 +28,14 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
     async function fetchTemplates() {
       try {
         const supabase = createClient();
+        // Only Approved templates are actually sendable — matches the
+        // inbox's template picker (src/components/inbox/template-picker.tsx).
+        // Without this filter a Draft/Rejected template could be picked
+        // here and the broadcast would fail entirely at Meta send time.
         const { data, error: fetchError } = await supabase
           .from('message_templates')
           .select('*')
+          .eq('status', 'Approved')
           .order('created_at', { ascending: false });
 
         if (fetchError) throw fetchError;
