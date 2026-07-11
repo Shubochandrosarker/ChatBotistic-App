@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { TochatApiError, isTochatConfigured, widgets } from '@/lib/tochat/client'
 import { tochatUserClientForOrg } from '@/lib/tochat/org'
 import { requireOrgId } from '@/lib/api/require-org-id'
+import { widgetOwnedByOrg } from '@/lib/tochat/ownership'
 
 /**
  * GET /api/tochat/widgets/{id}
@@ -14,16 +15,10 @@ import { requireOrgId } from '@/lib/api/require-org-id'
  * below re-fetches the widget first and verifies its `userClient` tag
  * matches the caller's org before touching it, so one org can never
  * edit or delete another org's widget by guessing/knowing its id (see
- * the "keep the re-fetch-and-verify ownership checks" note in
+ * src/lib/tochat/ownership.ts and the "keep the re-fetch-and-verify
+ * ownership checks" note in
  * ChatBotistic-System-Management/docs/CHATBOTISTIC-DASHBOARD-MASTER-PLAN.md).
  */
-async function loadOwnedWidget(id: string, orgId: string) {
-  const widget = await widgets.get(id)
-  if (widget.userClient !== tochatUserClientForOrg(orgId)) {
-    return null
-  }
-  return widget
-}
 
 export async function GET(
   _request: Request,
@@ -37,7 +32,7 @@ export async function GET(
       return NextResponse.json({ configured: false }, { status: 200 })
     }
 
-    const widget = await loadOwnedWidget(id, orgId)
+    const widget = await widgetOwnedByOrg(id, orgId)
     if (!widget) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     return NextResponse.json({ configured: true, widget })
@@ -62,7 +57,7 @@ export async function PUT(
       return NextResponse.json({ configured: false }, { status: 200 })
     }
 
-    const existing = await loadOwnedWidget(id, orgId)
+    const existing = await widgetOwnedByOrg(id, orgId)
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const payload = (await request.json()) as Record<string, unknown>
@@ -99,7 +94,7 @@ export async function DELETE(
       return NextResponse.json({ configured: false }, { status: 200 })
     }
 
-    const existing = await loadOwnedWidget(id, orgId)
+    const existing = await widgetOwnedByOrg(id, orgId)
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     await widgets.remove(id)

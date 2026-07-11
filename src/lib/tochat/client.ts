@@ -296,6 +296,24 @@ export interface TochatOperator extends TochatResource {
   activateDirectlyChat?: boolean
 }
 
+/** A single FAQ entry within a group. */
+export interface TochatFaq {
+  question: string
+  answer: string
+}
+
+/**
+ * A FAQ group belongs to one agent (`whatsapp`, same IRI-or-object
+ * relation shape as `TochatOperator.business`).
+ */
+export interface TochatFaqGroup extends TochatResource {
+  id?: string
+  '@id'?: string
+  title: string
+  whatsapp: string | { id?: string; '@id'?: string }
+  faqs: TochatFaq[]
+}
+
 /**
  * Resolve the widget id a `business` relation (IRI string or embedded
  * object, per Hydra's serialization) points at. Returns null when the
@@ -354,6 +372,7 @@ export const operators = {
 export const faqGroups = {
   list: (operatorId: string) =>
     request(`/api/v2/whatsapp_operators/${encodeURIComponent(operatorId)}/faq_grps`, 'GET').then(collection),
+  get: (id: string) => request(`/api/v2/faq_grps/${encodeURIComponent(id)}`, 'GET') as Promise<TochatResource>,
   create: (payload: TochatResource) => request('/api/v2/faq_grps', 'POST', payload) as Promise<TochatResource>,
   update: (id: string, payload: TochatResource) =>
     request(`/api/v2/faq_grps/${encodeURIComponent(id)}`, 'PUT', payload) as Promise<TochatResource>,

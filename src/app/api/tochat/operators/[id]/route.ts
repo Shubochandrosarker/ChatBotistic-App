@@ -1,14 +1,8 @@
 import { NextResponse } from 'next/server'
-import {
-  TochatApiError,
-  isTochatConfigured,
-  operators,
-  widgets,
-  resourceIdFromIri,
-  type TochatOperator,
-} from '@/lib/tochat/client'
+import { TochatApiError, isTochatConfigured, operators, widgets } from '@/lib/tochat/client'
 import { tochatUserClientForOrg } from '@/lib/tochat/org'
 import { requireOrgId } from '@/lib/api/require-org-id'
+import { operatorOwnedByOrg } from '@/lib/tochat/ownership'
 
 /**
  * GET /api/tochat/operators/{id}
@@ -18,18 +12,9 @@ import { requireOrgId } from '@/lib/api/require-org-id'
  * Same shared-master-account concern as /api/tochat/widgets/{id}: an
  * operator id alone doesn't prove it's the caller's. Ownership is
  * verified one level removed — resolve the operator's parent widget
- * (`business`) and check *that* widget's `userClient` tag.
+ * (`business`) and check *that* widget's `userClient` tag (see
+ * src/lib/tochat/ownership.ts).
  */
-async function loadOwnedOperator(id: string, orgId: string): Promise<TochatOperator | null> {
-  const operator = (await operators.get(id)) as TochatOperator
-  const widgetId = resourceIdFromIri(operator.business)
-  if (!widgetId) return null
-
-  const widget = await widgets.get(widgetId)
-  if (widget.userClient !== tochatUserClientForOrg(orgId)) return null
-
-  return operator
-}
 
 export async function GET(
   _request: Request,
@@ -43,7 +28,7 @@ export async function GET(
       return NextResponse.json({ configured: false }, { status: 200 })
     }
 
-    const operator = await loadOwnedOperator(id, orgId)
+    const operator = await operatorOwnedByOrg(id, orgId)
     if (!operator) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     return NextResponse.json({ configured: true, operator })
@@ -68,7 +53,7 @@ export async function PUT(
       return NextResponse.json({ configured: false }, { status: 200 })
     }
 
-    const existing = await loadOwnedOperator(id, orgId)
+    const existing = await operatorOwnedByOrg(id, orgId)
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const payload = (await request.json()) as Record<string, unknown>
@@ -113,7 +98,7 @@ export async function DELETE(
       return NextResponse.json({ configured: false }, { status: 200 })
     }
 
-    const existing = await loadOwnedOperator(id, orgId)
+    const existing = await operatorOwnedByOrg(id, orgId)
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     await operators.remove(id)
