@@ -224,6 +224,45 @@ export interface TochatWidget extends TochatResource {
   userClient?: string
 }
 
+/**
+ * The Agent Manager v1 field set — a WhatsApp operator attached to one
+ * widget (`business`, an IRI like `/api/v2/widgets/{id}` on write, an
+ * IRI string or embedded object on read depending on the API's
+ * serialization group). The full schema also includes a nested
+ * `form.items[]` lead-capture form builder, `sequence` (display
+ * order), and lead-notification email fields — not in the v1 UI yet.
+ */
+export interface TochatOperator extends TochatResource {
+  id?: string
+  '@id'?: string
+  number: string
+  name: string
+  business: string | { id?: string; '@id'?: string }
+  post?: string
+  message?: string
+  iconUrl?: string
+  chatform?: boolean
+  activateDirectlyChat?: boolean
+}
+
+/**
+ * Resolve the widget id a `business` relation (IRI string or embedded
+ * object, per Hydra's serialization) points at. Returns null when the
+ * shape is unrecognized rather than throwing — callers treat that as
+ * "can't verify ownership, deny."
+ */
+export function resourceIdFromIri(value: unknown): string | null {
+  if (typeof value === 'string') {
+    return value.replace(/\/+$/, '').split('/').pop() || null
+  }
+  if (value && typeof value === 'object') {
+    const obj = value as Record<string, unknown>
+    if (typeof obj.id === 'string') return obj.id
+    if (typeof obj['@id'] === 'string') return resourceIdFromIri(obj['@id'])
+  }
+  return null
+}
+
 // ---- Widgets ------------------------------------------------------------
 
 export const widgets = {

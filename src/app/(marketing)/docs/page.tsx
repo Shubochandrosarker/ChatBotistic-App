@@ -178,6 +178,7 @@ const navGroups: DocsNavGroup[] = [
       { id: "media", label: "Media" },
       { id: "leads", label: "Leads" },
       { id: "tochat-widgets", label: "Tochat widgets" },
+      { id: "tochat-agents", label: "Tochat agents" },
       { id: "automations", label: "Automations" },
       { id: "knowledge-base", label: "AI knowledge base" },
     ],
@@ -583,6 +584,46 @@ export default function DocsPage() {
             </Endpoint>
             <Endpoint method="DELETE" path="/api/tochat/widgets/{id}">
               <p>Delete a widget, after the same ownership check.</p>
+            </Endpoint>
+          </Section>
+
+          {/* ── Tochat agents ───────────────────────────────────── */}
+          <Section
+            id="tochat-agents"
+            title="Tochat agents"
+            lead="WhatsApp operators (agents) — each one attaches to exactly one widget. Same Tochat.be integration as widgets above; requires TOCHAT_API_EMAIL / TOCHAT_API_PASSWORD."
+          >
+            <Endpoint method="GET" path="/api/tochat/operators">
+              <p>List every agent across the signed-in org&apos;s widgets.</p>
+            </Endpoint>
+            <Endpoint method="POST" path="/api/tochat/operators">
+              <ParamsTable
+                params={[
+                  { name: "name", type: "string", required: true, description: "Agent display name." },
+                  { name: "number", type: "string", required: true, description: "WhatsApp number, e.g. 34627524218." },
+                  { name: "business", type: "string", required: true, description: "The widget id this agent attaches to — must belong to the caller's org." },
+                  { name: "post", type: "string", description: "Job title, e.g. \"Sales\"." },
+                  { name: "message", type: "string", description: "Greeting shown before the chat opens." },
+                  { name: "iconUrl", type: "string", description: "Agent avatar URL." },
+                  { name: "chatform", type: "boolean", description: "Collect a lead-capture form before opening WhatsApp." },
+                  { name: "activateDirectlyChat", type: "boolean", description: "Skip the agent picker when this is the preferred agent." },
+                ]}
+              />
+              <p>
+                <code className="font-mono text-[13px]">business</code> is a
+                plain widget id here, not the raw Tochat.be IRI — this route
+                translates between them and verifies the target widget
+                belongs to your org before attaching the agent.
+              </p>
+            </Endpoint>
+            <Endpoint method="GET" path="/api/tochat/operators/{id}">
+              <p>Fetch a single agent. Ownership is verified one level removed — via its parent widget&apos;s <code className="font-mono text-[13px]">userClient</code> tag.</p>
+            </Endpoint>
+            <Endpoint method="PUT" path="/api/tochat/operators/{id}">
+              <p>Update an agent, optionally re-attaching it to a different widget (re-verified the same way).</p>
+            </Endpoint>
+            <Endpoint method="DELETE" path="/api/tochat/operators/{id}">
+              <p>Delete an agent, after the same ownership check.</p>
             </Endpoint>
           </Section>
 

@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   MessageSquareText,
+  UserRound,
   Users,
   GitBranch,
   Radio,
@@ -42,6 +43,7 @@ const navItems = [
   { href: "/broadcasts", label: "Broadcasts", icon: Radio },
   { href: "/automations", label: "Automations", icon: Zap },
   { href: "/widgets", label: "Widgets", icon: MessageSquareText },
+  { href: "/agents", label: "Agents", icon: UserRound },
   { href: "/leads", label: "Leads", icon: Sparkles },
   { href: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
 ];

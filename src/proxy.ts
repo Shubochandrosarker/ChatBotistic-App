@@ -70,6 +70,7 @@ export async function proxy(request: NextRequest) {
     '/leads',
     '/knowledge-base',
     '/widgets',
+    '/agents',
   ];
   if (
     !user &&
