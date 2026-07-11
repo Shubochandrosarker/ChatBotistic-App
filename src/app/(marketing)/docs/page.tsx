@@ -180,6 +180,7 @@ const navGroups: DocsNavGroup[] = [
       { id: "tochat-widgets", label: "Tochat widgets" },
       { id: "tochat-agents", label: "Tochat agents" },
       { id: "tochat-faq-groups", label: "Tochat FAQ groups" },
+      { id: "tochat-booking-configs", label: "Tochat booking configs" },
       { id: "automations", label: "Automations" },
       { id: "knowledge-base", label: "AI knowledge base" },
     ],
@@ -670,6 +671,42 @@ export default function DocsPage() {
             </Endpoint>
             <Endpoint method="DELETE" path="/api/tochat/faq-groups/{id}">
               <p>Delete a FAQ group, after the same ownership check.</p>
+            </Endpoint>
+          </Section>
+
+          {/* ── Tochat booking configs ──────────────────────────── */}
+          <Section
+            id="tochat-booking-configs"
+            title="Tochat booking configs"
+            lead="Appointment-scheduling rules for one agent: booking window, slot length, weekly availability, and reminders. Same ownership model as FAQ groups — every config belongs to exactly one agent."
+          >
+            <Endpoint method="GET" path="/api/tochat/booking-configs?operatorId={id}">
+              <p>List the booking configs for one agent. <code className="font-mono text-[13px]">operatorId</code> is required.</p>
+            </Endpoint>
+            <Endpoint method="POST" path="/api/tochat/booking-configs">
+              <ParamsTable
+                params={[
+                  { name: "operatorId", type: "string", required: true, description: "The agent this config belongs to." },
+                  { name: "startDate / endDate", type: "string (YYYY-MM-DD)", required: true, description: "Booking window." },
+                  { name: "duration", type: "number", required: true, description: "Slot length in minutes." },
+                  { name: "timezone", type: "string", required: true, description: "IANA zone, e.g. \"Europe/Madrid\"." },
+                  { name: "bookingTimes", type: "{ day, availableFrom, availableUntil }[]", required: true, description: "Weekly availability — a day can have zero, one, or multiple windows (e.g. a morning/afternoon split)." },
+                  { name: "breakTime", type: "number", description: "Buffer between slots, in minutes. Default 0." },
+                  { name: "availablePlacePerSlot", type: "number", description: "Concurrent bookings per slot. Default 1." },
+                  { name: "allowedHourUntilBooking", type: "number", description: "Minimum notice, in hours. Default 0." },
+                  { name: "blockingDays", type: "string[] (YYYY-MM-DD)", description: "Dates fully blocked regardless of the weekly schedule." },
+                  { name: "sendReminder / sendReminder48 / cancelBookingInReminder", type: "boolean", description: "Reminder behavior. Default true." },
+                ]}
+              />
+            </Endpoint>
+            <Endpoint method="GET" path="/api/tochat/booking-configs/{id}">
+              <p>Fetch a single booking config.</p>
+            </Endpoint>
+            <Endpoint method="PUT" path="/api/tochat/booking-configs/{id}">
+              <p>Replace a config&apos;s schedule and settings (same body shape as create, minus <code className="font-mono text-[13px]">operatorId</code>).</p>
+            </Endpoint>
+            <Endpoint method="DELETE" path="/api/tochat/booking-configs/{id}">
+              <p>Delete a booking config, after the same ownership check.</p>
             </Endpoint>
           </Section>
 

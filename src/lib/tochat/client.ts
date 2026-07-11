@@ -314,6 +314,38 @@ export interface TochatFaqGroup extends TochatResource {
   faqs: TochatFaq[]
 }
 
+export type TochatWeekday = 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI' | 'SAT' | 'SUN'
+
+/** One recurring availability window within a booking config. */
+export interface TochatBookingTime {
+  day: TochatWeekday
+  availableFrom: string
+  availableUntil: string
+}
+
+/**
+ * The appointment-scheduling rules for one agent — booking window,
+ * slot duration, weekly availability, and reminder settings. Belongs
+ * to exactly one agent, same relation shape as a FAQ group.
+ */
+export interface TochatBookingConfig extends TochatResource {
+  id?: string
+  '@id'?: string
+  whatsapp: string | { id?: string; '@id'?: string }
+  startDate: string
+  endDate: string
+  duration: number
+  breakTime?: number
+  availablePlacePerSlot?: number
+  allowedHourUntilBooking?: number
+  bookingTimes: TochatBookingTime[]
+  timezone: string
+  sendReminder?: boolean
+  sendReminder48?: boolean
+  cancelBookingInReminder?: boolean
+  blockingDays?: string[]
+}
+
 /**
  * Resolve the widget id a `business` relation (IRI string or embedded
  * object, per Hydra's serialization) points at. Returns null when the
@@ -422,7 +454,11 @@ export const audiences = {
 
 export const bookingConfigs = {
   list: (operatorId: string) =>
-    request(`/api/v2/booking_configs?${qs({ whatsapp: operatorId })}`, 'GET').then(collection),
+    request(`/api/v2/whatsapp_operators/${encodeURIComponent(operatorId)}/booking_configs`, 'GET').then(
+      collection,
+    ),
+  get: (id: string) =>
+    request(`/api/v2/booking_configs/${encodeURIComponent(id)}`, 'GET') as Promise<TochatResource>,
   create: (payload: TochatResource) =>
     request('/api/v2/booking_configs', 'POST', payload) as Promise<TochatResource>,
   update: (id: string, payload: TochatResource) =>

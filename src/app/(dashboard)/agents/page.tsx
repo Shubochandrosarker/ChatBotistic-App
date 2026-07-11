@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
+  Calendar,
   HelpCircle,
   Loader2,
   MoreVertical,
@@ -30,6 +31,7 @@ import {
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { AgentForm } from '@/components/agents/agent-form';
 import { FaqManagerDialog } from '@/components/agents/faq-manager-dialog';
+import { BookingConfigDialog } from '@/components/agents/booking-config-dialog';
 import { resourceIdFromIri, type TochatOperator, type TochatWidget } from '@/lib/tochat/client';
 
 interface OperatorsResponse {
@@ -55,6 +57,7 @@ export default function AgentsPage() {
   const [pendingDelete, setPendingDelete] = useState<TochatOperator | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [faqAgent, setFaqAgent] = useState<TochatOperator | null>(null);
+  const [bookingAgent, setBookingAgent] = useState<TochatOperator | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -196,6 +199,10 @@ export default function AgentsPage() {
                       <HelpCircle className="size-4" />
                       Manage FAQs
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setBookingAgent(agent)}>
+                      <Calendar className="size-4" />
+                      Manage Bookings
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
                         setEditAgent(agent);
@@ -243,6 +250,12 @@ export default function AgentsPage() {
         open={!!faqAgent}
         onOpenChange={(v) => !v && setFaqAgent(null)}
         agent={faqAgent}
+      />
+
+      <BookingConfigDialog
+        open={!!bookingAgent}
+        onOpenChange={(v) => !v && setBookingAgent(null)}
+        agent={bookingAgent}
       />
 
       <Dialog
