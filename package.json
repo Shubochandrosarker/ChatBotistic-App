@@ -1,20 +1,21 @@
 {
-  "name": "wpistic-whatsapp-crm",
+  "name": "chatbotistic-app",
   "version": "0.1.0",
   "private": true,
-  "description": "WPistic WhatsApp CRM — multi-tenant WhatsApp CRM SaaS built on Next.js and Supabase, with dual-provider messaging (Meta Cloud API + Twilio), org-scoped tenancy, and Memberistic/Licenseistic SSO gating.",
+  "description": "Chatbotistic — multi-tenant WhatsApp CRM and chatbot dashboard built on Next.js and Supabase, with dual-provider messaging (Meta Cloud API + Twilio), org-scoped tenancy, and Memberistic/Licenseistic SSO gating.",
   "license": "SEE LICENSE IN LICENSE",
-  "author": "WPistic",
-  "homepage": "https://github.com/shubochandrosarker/WPistic-WhatsApp-CRM",
+  "author": "Chatbotistic",
+  "homepage": "https://github.com/shubochandrosarker/chatbotistic-app",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/shubochandrosarker/WPistic-WhatsApp-CRM.git"
+    "url": "git+https://github.com/shubochandrosarker/chatbotistic-app.git"
   },
   "bugs": {
-    "url": "https://github.com/shubochandrosarker/WPistic-WhatsApp-CRM/issues"
+    "url": "https://github.com/shubochandrosarker/chatbotistic-app/issues"
   },
   "keywords": [
     "crm",
+    "chatbot",
     "whatsapp",
     "whatsapp-business-api",
     "twilio",

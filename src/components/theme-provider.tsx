@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { readNamespaced, THEME_KEY, writeNamespaced } from "@/lib/storage-keys";
 
 // useLayoutEffect warns ("does nothing on the server") when it runs
 // during SSR. This component is client-only in practice but gets
@@ -25,7 +26,8 @@ const useIsomorphicLayoutEffect =
 export type Theme = "light" | "dark" | "system";
 type ResolvedTheme = "light" | "dark";
 
-const STORAGE_KEY = "wpistic-theme";
+const STORAGE_KEY = THEME_KEY.key;
+const LEGACY_STORAGE_KEY = THEME_KEY.legacy;
 
 interface ThemeContextValue {
   theme: Theme;
@@ -75,7 +77,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     let next = theme;
     if (hydrating.current) {
       hydrating.current = false;
-      const stored = window.localStorage.getItem(STORAGE_KEY) as Theme | null;
+      const stored = readNamespaced(THEME_KEY) as Theme | null;
       next =
         stored === "light" || stored === "dark" || stored === "system"
           ? stored
@@ -106,7 +108,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [theme]);
 
   const setTheme = useCallback((next: Theme) => {
-    window.localStorage.setItem(STORAGE_KEY, next);
+    writeNamespaced(THEME_KEY, next);
     setThemeState(next);
   }, []);
 
@@ -114,7 +116,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setThemeState((prev) => {
       const current = prev === "system" ? systemTheme() : prev;
       const next: Theme = current === "dark" ? "light" : "dark";
-      window.localStorage.setItem(STORAGE_KEY, next);
+      writeNamespaced(THEME_KEY, next);
       return next;
     });
   }, []);
@@ -137,10 +139,17 @@ export function useTheme(): ThemeContextValue {
 
 /** Inline, blocking script — runs before paint to avoid a theme flash.
  * Mirrors the provider's default: no stored choice → light; the OS
- * preference only applies when "system" was explicitly chosen. */
+ * preference only applies when "system" was explicitly chosen.
+ *
+ * It has to fall back to the pre-rebrand key itself rather than leaving
+ * that to `readNamespaced`. This script is what paints the correct
+ * theme; the provider only catches up after hydration. Without the
+ * fallback here, every returning dark-mode user would get one
+ * light-themed frame on their first load after the rename — exactly the
+ * flash this script exists to prevent. */
 export const themeInitScript = `
 (function(){try{
-var t=localStorage.getItem('${STORAGE_KEY}');
+var t=localStorage.getItem('${STORAGE_KEY}')||localStorage.getItem('${LEGACY_STORAGE_KEY}');
 var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);
 var r=document.documentElement;
 if(d)r.classList.add('dark');

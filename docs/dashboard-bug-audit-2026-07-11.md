@@ -1,3 +1,7 @@
+> **Superseded by [`audit-and-rebrand-2026-07-31.md`](./audit-and-rebrand-2026-07-31.md).**
+> Every one of the ten bugs below was re-verified on 2026-07-31 and
+> **all ten are fixed**. Kept for history — do not treat as current.
+
 # Dashboard Bug Audit — 2026-07-11
 
 Full-repo audit of `ChatBotistic-App` (package name `wpistic-whatsapp-crm`, the

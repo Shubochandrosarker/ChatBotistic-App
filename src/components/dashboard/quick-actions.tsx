@@ -20,25 +20,25 @@ const ACTIONS: Action[] = [
     label: 'New Contact',
     href: '/contacts',
     icon: UserPlus,
-    tint: 'bg-violet-500/12 text-violet-500 dark:text-violet-300',
+    tint: 'bg-chart-1/12 text-chart-1',
   },
   {
     label: 'New Deal',
     href: '/pipelines',
     icon: Briefcase,
-    tint: 'bg-blue-500/12 text-blue-500 dark:text-blue-300',
+    tint: 'bg-chart-2/12 text-chart-2',
   },
   {
     label: 'New Broadcast',
     href: '/broadcasts/new',
     icon: Radio,
-    tint: 'bg-amber-500/14 text-amber-600 dark:text-amber-300',
+    tint: 'bg-chart-4/14 text-chart-4',
   },
   {
     label: 'New Automation',
     href: '/automations/new',
     icon: Zap,
-    tint: 'bg-emerald-500/12 text-emerald-500 dark:text-emerald-300',
+    tint: 'bg-chart-3/12 text-chart-3',
   },
 ]
 

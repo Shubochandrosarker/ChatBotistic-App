@@ -16,10 +16,10 @@ opinions become yours.
 ## Fork and run
 
 ```bash
-# 1. Fork on GitHub: https://github.com/shubochandrosarker/WPistic-WhatsApp-CRM → Fork
+# 1. Fork on GitHub: https://github.com/shubochandrosarker/chatbotistic-app → Fork
 # 2. Clone your fork
-git clone https://github.com/<your-username>/WPistic-WhatsApp-CRM.git
-cd WPistic-WhatsApp-CRM
+git clone https://github.com/<your-username>/chatbotistic-app.git
+cd chatbotistic-app
 
 cp .env.local.example .env.local   # fill in Supabase + Meta creds
 npm install
@@ -34,7 +34,7 @@ Full setup (Supabase migrations, WhatsApp Business API, deploy) lives in
 Pull in upstream bug fixes and security patches periodically:
 
 ```bash
-git remote add upstream https://github.com/shubochandrosarker/WPistic-WhatsApp-CRM.git  # once
+git remote add upstream https://github.com/shubochandrosarker/chatbotistic-app.git  # once
 git fetch upstream
 git checkout main
 git merge upstream/main     # or: git rebase upstream/main
@@ -50,7 +50,7 @@ updating on your schedule is a valid alternative.
 
 If you find a bug in the upstream code — not one you introduced in your
 fork — please file it using the
-[bug report](https://github.com/shubochandrosarker/WPistic-WhatsApp-CRM/issues/new?template=bug_report.yml)
+[bug report](https://github.com/shubochandrosarker/chatbotistic-app/issues/new?template=bug_report.yml)
 template. Including the commit SHA, the runtime (Hostinger / Vercel /
 local / other), and logs will get to a fix fastest.
 

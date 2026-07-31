@@ -17,7 +17,7 @@ export function MetricsGrid({ metrics }: { metrics: MetricsBundle }) {
         title="Active Conversations"
         value={metrics.activeConversations.current}
         icon={MessageSquare}
-        accent="violet"
+        accent="brand"
         delta={{
           sign: metrics.activeConversations.previous,
           label: deltaLabel(
@@ -30,7 +30,7 @@ export function MetricsGrid({ metrics }: { metrics: MetricsBundle }) {
         title="New Contacts Today"
         value={metrics.newContactsToday.current}
         icon={UserPlus}
-        accent="blue"
+        accent="sky"
         delta={{
           sign: metrics.newContactsToday.current - metrics.newContactsToday.previous,
           label: deltaLabel(
@@ -44,7 +44,7 @@ export function MetricsGrid({ metrics }: { metrics: MetricsBundle }) {
         value={metrics.openDealsValue}
         format={formatCurrency}
         icon={DollarSign}
-        accent="emerald"
+        accent="violet"
         subtitle={`${metrics.openDealsCount} open deal${metrics.openDealsCount === 1 ? '' : 's'}`}
       />
       <MetricCard
