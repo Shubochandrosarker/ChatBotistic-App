@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 export const metadata: Metadata = {
   title: "API Documentation",
   description:
-    "REST API reference for WPistic WhatsApp CRM — configuration, messaging, broadcasts, webhooks, SMS compliance, SSO, and self-hosting.",
+    "REST API reference for Chatbotistic — configuration, messaging, broadcasts, webhooks, SMS compliance, SSO, and self-hosting.",
 };
 
 /* ------------------------------------------------------------------ */
@@ -213,7 +213,7 @@ export default function DocsPage() {
           Developer documentation
         </span>
         <h1 className="mt-2 font-heading text-4xl font-bold tracking-tight">
-          WPistic WhatsApp CRM API
+          Chatbotistic API
         </h1>
         <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
           Everything the dashboard does runs through this JSON API — the same

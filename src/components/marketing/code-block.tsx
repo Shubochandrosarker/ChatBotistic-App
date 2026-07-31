@@ -28,7 +28,7 @@ export function CodeBlock({ code, label, className }: CodeBlockProps) {
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border border-border bg-[oklch(0.19_0.02_274)] text-[13px] leading-relaxed dark:bg-[oklch(0.14_0.016_274)]",
+        "overflow-hidden rounded-xl border border-border bg-[oklch(0.185_0.018_168)] text-[13px] leading-relaxed dark:bg-[oklch(0.14_0.014_168)]",
         className,
       )}
     >
@@ -53,7 +53,7 @@ export function CodeBlock({ code, label, className }: CodeBlockProps) {
           )}
         </button>
       </div>
-      <pre className="overflow-x-auto px-4 py-3.5 font-mono text-[oklch(0.9_0.01_286)]">
+      <pre className="overflow-x-auto px-4 py-3.5 font-mono text-[oklch(0.9_0.008_162)]">
         <code>{code}</code>
       </pre>
     </div>

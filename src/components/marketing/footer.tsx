@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { MessageCircle } from "lucide-react";
+import { BrandTile } from "@/components/brand/logo";
+
 
 const columns: { heading: string; links: { href: string; label: string }[] }[] =
   [
@@ -40,17 +41,15 @@ export function MarketingFooter() {
             href="/"
             className="flex items-center gap-2.5 font-semibold tracking-tight"
           >
-            <span className="flex size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <MessageCircle className="size-4.5" />
-            </span>
-            <span>
-              WPistic <span className="text-primary">WhatsApp CRM</span>
+            <BrandTile className="size-8 rounded-xl" />
+            <span className="brand-text font-heading text-[16px] font-extrabold tracking-[-0.02em]">
+              Chatbotistic
             </span>
           </Link>
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-            The multi-tenant WhatsApp CRM — shared inbox, broadcasts,
-            pipelines, and automations on Meta Cloud API, Twilio, or your own
-            SMS gateway.
+            Every conversation, contact, and deal in one place — shared
+            inbox, broadcasts, pipelines, chatbot widgets, and automations on
+            Meta Cloud API, Twilio, or your own SMS gateway.
           </p>
         </div>
 
@@ -76,7 +75,7 @@ export function MarketingFooter() {
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:px-6">
           <p>
-            © {new Date().getFullYear()} WPistic. Part of the WordPressistic
+            © {new Date().getFullYear()} Chatbotistic. Part of the WordPressistic
             ecosystem.
           </p>
           <p>

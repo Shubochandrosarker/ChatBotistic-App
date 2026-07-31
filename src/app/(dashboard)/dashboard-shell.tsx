@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { CommandPalette } from "@/components/command/command-palette";
 import { AppShellSkeleton } from "@/components/skeletons";
+import { SupportBubble } from "@/components/support/support-bubble";
 
 // Auth-gated dashboard shell. Extracted from the layout so the layout
 // itself can stay a server component and export metadata (noindex) —
@@ -88,6 +89,10 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
         open={commandOpen}
         onOpenChange={setCommandOpen}
       />
+      {/* Rendered inside the auth gate, so it only ever appears to a
+          signed-in user — the assistant is account help, not a public
+          sales widget. */}
+      <SupportBubble />
     </div>
   );
 }
