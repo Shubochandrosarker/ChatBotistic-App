@@ -14,7 +14,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { MessageSquare, CheckCircle } from "lucide-react";
+import { AuthShell } from "@/components/brand/auth-shell";
+import { CheckCircle } from "lucide-react";
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState("");
@@ -64,13 +65,13 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <Card className="w-full max-w-md border-border bg-card">
-          <CardHeader className="items-center text-center">
+      <AuthShell>
+        <Card className="w-full border-border bg-card elevation-2">
+          <CardHeader>
             <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
               <CheckCircle className="h-6 w-6 text-primary" />
             </div>
-            <CardTitle className="text-xl text-foreground">
+            <CardTitle className="font-heading text-[22px] font-bold text-foreground">
               Check your email
             </CardTitle>
             <CardDescription className="text-muted-foreground">
@@ -90,20 +91,17 @@ export default function SignupPage() {
             </Link>
           </CardContent>
         </Card>
-      </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md border-border bg-card">
-        <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <MessageSquare className="h-6 w-6 text-primary" />
-          </div>
-          <CardTitle className="text-xl text-foreground">Create account</CardTitle>
+    <AuthShell>
+      <Card className="w-full border-border bg-card elevation-2">
+        <CardHeader>
+          <CardTitle className="font-heading text-[22px] font-bold text-foreground">Create account</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Get started with WPistic WhatsApp CRM
+            Start running your WhatsApp on Chatbotistic
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -194,6 +192,6 @@ export default function SignupPage() {
           </p>
         </CardContent>
       </Card>
-    </div>
+    </AuthShell>
   );
 }

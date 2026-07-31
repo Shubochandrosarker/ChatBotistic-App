@@ -15,12 +15,16 @@ import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import {
+  NOTIFS_SEEN_KEY,
+  readNamespaced,
+  writeNamespaced,
+} from "@/lib/storage-keys";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-const SEEN_KEY = "wpistic-notifs-seen";
 
 type NotificationTone = "danger" | "info";
 
@@ -118,7 +122,7 @@ export function NotificationCenter() {
     void loadNotifications()
       .then((next) => {
         setItems(next);
-        const seen = window.localStorage.getItem(SEEN_KEY) ?? "";
+        const seen = readNamespaced(NOTIFS_SEEN_KEY) ?? "";
         setUnseen(next.filter((n) => n.at > seen).length);
       })
       .catch((err) => {
@@ -137,9 +141,9 @@ export function NotificationCenter() {
     if (next) {
       refresh();
       if (items && items.length > 0) {
-        window.localStorage.setItem(SEEN_KEY, items[0].at);
+        writeNamespaced(NOTIFS_SEEN_KEY, items[0].at);
       } else {
-        window.localStorage.setItem(SEEN_KEY, new Date().toISOString());
+        writeNamespaced(NOTIFS_SEEN_KEY, new Date().toISOString());
       }
       setUnseen(0);
     }

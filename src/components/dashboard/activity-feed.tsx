@@ -31,11 +31,11 @@ interface KindTheme {
 }
 
 const KIND_THEME: Record<ActivityKind, KindTheme> = {
-  message: { icon: MessageSquare, badge: 'bg-blue-500/10 text-blue-400' },
-  contact: { icon: UserPlus, badge: 'bg-violet-500/10 text-violet-400' },
-  deal: { icon: Briefcase, badge: 'bg-violet-500/10 text-violet-400' },
-  broadcast: { icon: Radio, badge: 'bg-amber-500/10 text-amber-400' },
-  automation: { icon: Zap, badge: 'bg-rose-500/10 text-rose-400' },
+  message: { icon: MessageSquare, badge: 'bg-chart-2/12 text-chart-2' },
+  contact: { icon: UserPlus, badge: 'bg-chart-1/12 text-chart-1' },
+  deal: { icon: Briefcase, badge: 'bg-chart-3/12 text-chart-3' },
+  broadcast: { icon: Radio, badge: 'bg-chart-4/14 text-chart-4' },
+  automation: { icon: Zap, badge: 'bg-chart-5/12 text-chart-5' },
 }
 
 export function ActivityFeed({ items, loading }: ActivityFeedProps) {

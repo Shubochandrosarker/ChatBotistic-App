@@ -1,24 +1,23 @@
 import type { MetadataRoute } from "next";
 
-// PWA manifest — makes the CRM installable as a standalone app with a
-// proper name, theme color, and icon. Served at /manifest.webmanifest
-// and auto-linked by Next.
+// PWA manifest — makes Chatbotistic installable as a standalone app
+// with a proper name, theme color, and icon. Served at
+// /manifest.webmanifest and auto-linked by Next.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "WPistic WhatsApp CRM",
-    short_name: "WPistic CRM",
+    name: "Chatbotistic",
+    short_name: "Chatbotistic",
     description:
-      "Multi-tenant WhatsApp CRM — shared inbox, broadcasts, pipelines, and automations.",
+      "Every conversation, contact, and deal in one place — shared inbox, broadcasts, pipelines, and automations.",
     start_url: "/dashboard",
     display: "standalone",
-    background_color: "#f6f5fb",
-    theme_color: "#7c3aed",
+    // Matches the light-mode --background and --primary tokens in
+    // globals.css, so the splash screen matches the app it opens into.
+    background_color: "#f5faf7",
+    theme_color: "#008253",
     icons: [
-      {
-        src: "/icon",
-        sizes: "any",
-        type: "image/png",
-      },
+      { src: "/icon", sizes: "32x32", type: "image/png" },
+      { src: "/apple-icon", sizes: "180x180", type: "image/png" },
     ],
   };
 }

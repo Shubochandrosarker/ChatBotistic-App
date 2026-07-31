@@ -10,9 +10,9 @@ lands.
 
 Instead, please report privately via one of:
 
-- [GitHub Security Advisories](https://github.com/shubochandrosarker/WPistic-WhatsApp-CRM/security/advisories/new)
+- [GitHub Security Advisories](https://github.com/shubochandrosarker/chatbotistic-app/security/advisories/new)
   (preferred — keeps the disclosure, fix, and CVE all in one place).
-- Email: `security@wpistic.com` with `[WPistic CRM security]` in the subject.
+- Email: `security@wpistic.com` with `[Chatbotistic security]` in the subject.
 
 Include, if you can:
 
@@ -34,7 +34,7 @@ Include, if you can:
 ## Scope
 
 In scope:
-- Anything in this repository (`shubochandrosarker/WPistic-WhatsApp-CRM`), including webhook and auth
+- Anything in this repository (`shubochandrosarker/chatbotistic-app`), including webhook and auth
   flows, token encryption, RLS policies, and the built-in cron endpoints.
 - Default configurations shipped in `docs/` — e.g. if the setup guide leaves
   an unsafe default.

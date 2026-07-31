@@ -102,3 +102,20 @@ export function phoneVariants(sanitized: string): string[] {
 export function isRecipientNotAllowedError(message: string): boolean {
   return /131030|not in allowed list|not in the allowed list/i.test(message)
 }
+
+/**
+ * Masks a phone number for logging — keeps the last four digits and
+ * replaces everything before them with bullets.
+ *
+ * Log streams are retained, shipped to third-party aggregators, and
+ * readable by anyone with hosting-panel access, so a contact's full
+ * number does not belong in one. Four digits is enough to correlate a
+ * log line with a specific contact while debugging.
+ *
+ *   maskPhone('+8801712345678') -> '••••••••••5678'
+ */
+export function maskPhone(phone: string): string {
+  if (!phone) return ''
+  const visible = phone.slice(-4)
+  return '•'.repeat(Math.max(0, phone.length - 4)) + visible
+}

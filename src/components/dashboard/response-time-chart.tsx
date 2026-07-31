@@ -158,7 +158,7 @@ function Bars({
               width={barW}
               height={muted ? 2 : Math.max(1, h)}
               rx={4}
-              fill={muted ? 'rgb(51 65 85)' : '#7c3aed'}
+              fill={muted ? 'var(--muted)' : 'var(--chart-1)'}
               opacity={muted ? 0.6 : 1}
             >
               <title>

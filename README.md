@@ -1,15 +1,15 @@
-# WPistic WhatsApp CRM
+# Chatbotistic
 
-> Multi-tenant WhatsApp CRM SaaS — shared inbox, contacts, sales
-> pipelines, broadcasts, and no-code automations. Dual-provider
-> messaging (Meta Cloud API + Twilio), org-scoped tenancy, and
-> Memberistic/Licenseistic SSO gating.
+> Multi-tenant WhatsApp CRM and chatbot dashboard — shared inbox,
+> contacts, sales pipelines, broadcasts, chatbot widgets, and no-code
+> automations. Dual-provider messaging (Meta Cloud API + Twilio),
+> org-scoped tenancy, and Memberistic/Licenseistic SSO gating.
 
-[![CI](https://github.com/shubochandrosarker/WPistic-WhatsApp-CRM/actions/workflows/ci.yml/badge.svg)](https://github.com/shubochandrosarker/WPistic-WhatsApp-CRM/actions/workflows/ci.yml)
+[![CI](https://github.com/shubochandrosarker/chatbotistic-app/actions/workflows/ci.yml/badge.svg)](https://github.com/shubochandrosarker/chatbotistic-app/actions/workflows/ci.yml)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=nextdotjs)](https://nextjs.org)
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20Auth-3ecf8e?logo=supabase)](https://supabase.com)
 
-WPistic WhatsApp CRM derives from the open-source
+Chatbotistic derives from the open-source
 [wacrm](https://github.com/ArnasDon/wacrm) template (MIT) and extends
 it into a commercial multi-tenant SaaS.
 
@@ -33,21 +33,19 @@ it into a commercial multi-tenant SaaS.
 
 ## WordPressistic ecosystem
 
-WPistic WhatsApp CRM is one product in the WordPressistic family and
-stays a **separate codebase** from the Chatbotistic products:
+Chatbotistic is one product in the WordPressistic family. This repo is
+the **app** — the authenticated dashboard operators log into. It stays
+a separate codebase from the sibling repos:
 
-- **Chatbotistic** (`ChatBotistic-Complete-System-Management`) — the
-  chatbotistic.com website, membership/licensing chain, and the
-  standalone **Chatbotistic Dashboard** (`chatbotistic-dashboard/`,
-  dashboard.chatbotistic.com) for widget, landing-page, lead, and
-  campaign management.
-- **Chatbotistic SaaS Connector** (`chatbotistic-saas-connector`) —
-  the distribution repo for the WordPress connector plugin stack.
+- **`ChatBotistic-Complete-System-Management`** — the
+  chatbotistic.com marketing site and the membership/licensing chain.
+- **`chatbotistic-saas-connector`** — the distribution repo for the
+  WordPress connector plugin stack.
 
-This CRM's architecture (org tenancy + RLS, HMAC SSO bridge,
-provider-strategy messaging layer, encrypted credentials) served as
-the reference design for the Chatbotistic Dashboard, but no code is
-shared between the repos — each evolves independently.
+No code is shared between the repos; each evolves independently. The
+app talks to the wider ecosystem over two seams only: the HMAC SSO
+bridge (`src/lib/sso/`) and the Chatbotistic leads API
+(`src/lib/chatbotistic/client.ts`).
 
 ## Multi-tenancy
 
@@ -64,7 +62,7 @@ Access to the CRM is gated by two WordPress plugins:
 - **Licenseistic** — owns the license key, allowed domains, and
   widget/agent/domain limits.
 
-On the WordPress side the plugins mint a signed SSO token. WPistic CRM
+On the WordPress side the plugins mint a signed SSO token. Chatbotistic
 verifies it (`src/lib/sso/`), provisions or maps the org, and stores
 the asserted entitlements (agent cap, widget cap, allowed domains) on
 the org record. The `/api/sso/login` route is the entry point.
@@ -78,8 +76,8 @@ the org record. The `/api/sso/login` route is the entry point.
 ## Quick start
 
 ```bash
-git clone https://github.com/shubochandrosarker/WPistic-WhatsApp-CRM.git
-cd WPistic-WhatsApp-CRM
+git clone https://github.com/shubochandrosarker/chatbotistic-app.git
+cd chatbotistic-app
 npm install
 cp .env.local.example .env.local   # fill in Supabase + provider creds
 npm run dev

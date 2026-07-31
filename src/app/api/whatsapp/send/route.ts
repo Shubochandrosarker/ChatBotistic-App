@@ -7,6 +7,7 @@ import {
   isValidE164,
   phoneVariants,
   isRecipientNotAllowedError,
+  maskPhone,
 } from '@/lib/whatsapp/phone-utils'
 import {
   checkRateLimit,
@@ -272,8 +273,12 @@ export async function POST(request: Request) {
     // sends go straight through. sanitizePhoneForMeta on workingPhone
     // will yield workingPhone itself, so re-storing preserves it.
     if (workingPhone !== sanitizedPhone) {
-      console.log(
-        `[whatsapp/send] Auto-corrected contact phone: ${sanitizedPhone} → ${workingPhone}`
+      // Masked: this line lands in the hosting provider's log stream,
+      // which is a far less protected place than the contacts table.
+      // The last four digits are enough to correlate a correction with
+      // a specific contact while debugging.
+      console.info(
+        `[whatsapp/send] Auto-corrected contact phone: ${maskPhone(sanitizedPhone)} → ${maskPhone(workingPhone)}`
       )
       await supabase
         .from('contacts')

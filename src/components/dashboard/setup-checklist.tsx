@@ -15,8 +15,13 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import {
+  ONBOARDING_DISMISSED_KEY,
+  readNamespaced,
+  writeNamespaced,
+} from "@/lib/storage-keys";
 
-const DISMISS_KEY = "wpistic-onboarding-dismissed";
+
 
 interface Step {
   id: string;
@@ -40,7 +45,7 @@ export function SetupChecklist() {
   useEffect(() => {
     // localStorage is client-only, so this is a post-mount sync.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDismissed(window.localStorage.getItem(DISMISS_KEY) === "1");
+    setDismissed(readNamespaced(ONBOARDING_DISMISSED_KEY) === "1");
 
     const db = createClient();
     const countOf = async (table: string) => {
@@ -98,7 +103,7 @@ export function SetupChecklist() {
   }, []);
 
   const dismiss = useCallback(() => {
-    window.localStorage.setItem(DISMISS_KEY, "1");
+    writeNamespaced(ONBOARDING_DISMISSED_KEY, "1");
     setDismissed(true);
   }, []);
 
@@ -119,7 +124,7 @@ export function SetupChecklist() {
           </div>
           <div>
             <h2 className="font-heading text-base font-semibold text-foreground">
-              Finish setting up your CRM
+              Finish setting up Chatbotistic
             </h2>
             <p className="mt-0.5 text-sm text-muted-foreground">
               {completed} of {steps.length} steps done — you&apos;re {pct}%

@@ -6,6 +6,7 @@ import {
   isValidE164,
   phoneVariants,
   isRecipientNotAllowedError,
+  maskPhone,
 } from "./phone-utils";
 
 describe("sanitizePhoneForMeta", () => {
@@ -78,5 +79,26 @@ describe("isRecipientNotAllowedError", () => {
 
   it("ignores unrelated error messages", () => {
     expect(isRecipientNotAllowedError("rate limit exceeded")).toBe(false);
+  });
+});
+
+describe("maskPhone", () => {
+  it("keeps only the last four digits visible", () => {
+    expect(maskPhone("8801712345678")).toBe("•••••••••5678");
+  });
+
+  it("masks the country-code prefix of an E.164 number too", () => {
+    const masked = maskPhone("+37063949836");
+    expect(masked.endsWith("9836")).toBe(true);
+    expect(masked).not.toContain("370");
+  });
+
+  it("never lengthens or shortens the value it masks", () => {
+    expect(maskPhone("5551234567")).toHaveLength("5551234567".length);
+  });
+
+  it("does not throw on empty or very short input", () => {
+    expect(maskPhone("")).toBe("");
+    expect(maskPhone("12")).toBe("12");
   });
 });

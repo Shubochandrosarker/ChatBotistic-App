@@ -1,3 +1,8 @@
+> **Superseded by [`audit-and-rebrand-2026-07-31.md`](./audit-and-rebrand-2026-07-31.md).**
+> The theme-hydration flash and the Base UI `nativeButton` warning are
+> fixed, and the Chatbotistic rebrand has since landed for the app
+> (the marketing site is still outstanding). Kept for history.
+
 # Design & Responsive Audit — 2026-07-11
 
 Live runtime audit of the marketing/docs surface (`/`, `/docs`, `/login`,

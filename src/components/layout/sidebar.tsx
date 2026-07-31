@@ -22,6 +22,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import { BrandLogo } from "@/components/brand/logo";
 import {
   Avatar,
   AvatarFallback,
@@ -35,17 +36,43 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/inbox", label: "Inbox", icon: MessageSquare },
-  { href: "/contacts", label: "Contacts", icon: Users },
-  { href: "/pipelines", label: "Pipelines", icon: GitBranch },
-  { href: "/broadcasts", label: "Broadcasts", icon: Radio },
-  { href: "/automations", label: "Automations", icon: Zap },
-  { href: "/widgets", label: "Widgets", icon: MessageSquareText },
-  { href: "/agents", label: "Agents", icon: UserRound },
-  { href: "/leads", label: "Leads", icon: Sparkles },
-  { href: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
+// Grouped rather than one flat run of ten links: the sections mirror how
+// the product actually splits — the live conversation surface, the
+// outbound campaign tools, and everything that configures the chatbot
+// itself. Ten undifferentiated rows forced users to read the whole list
+// every time; three short ones are scannable at a glance.
+const navSections: {
+  heading: string;
+  items: { href: string; label: string; icon: typeof LayoutDashboard }[];
+}[] = [
+  {
+    heading: "Overview",
+    items: [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }],
+  },
+  {
+    heading: "Conversations",
+    items: [
+      { href: "/inbox", label: "Inbox", icon: MessageSquare },
+      { href: "/contacts", label: "Contacts", icon: Users },
+      { href: "/pipelines", label: "Pipelines", icon: GitBranch },
+    ],
+  },
+  {
+    heading: "Campaigns",
+    items: [
+      { href: "/broadcasts", label: "Broadcasts", icon: Radio },
+      { href: "/automations", label: "Automations", icon: Zap },
+    ],
+  },
+  {
+    heading: "Chatbot",
+    items: [
+      { href: "/widgets", label: "Widgets", icon: MessageSquareText },
+      { href: "/agents", label: "Agents", icon: UserRound },
+      { href: "/leads", label: "Leads", icon: Sparkles },
+      { href: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
+    ],
+  },
 ];
 
 const bottomNavItems = [
@@ -87,7 +114,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
     };
   }, [open, onClose]);
 
-  function renderNavLink(item: (typeof navItems)[number]) {
+  function renderNavLink(item: { href: string; label: string; icon: typeof LayoutDashboard }) {
     const isActive =
       pathname === item.href ||
       (item.href !== "/dashboard" && pathname.startsWith(item.href));
@@ -98,11 +125,12 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       <li key={item.href}>
         <Link
           href={item.href}
+          aria-current={isActive ? "page" : undefined}
           className={cn(
-            "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors lg:py-2.5",
+            "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors lg:py-2.5",
             isActive
-              ? "bg-sidebar-accent text-sidebar-accent-foreground"
-              : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+              ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground"
+              : "font-medium text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
           )}
         >
           {/* Active accent bar */}
@@ -112,7 +140,12 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               isActive ? "opacity-100" : "opacity-0",
             )}
           />
-          <item.icon className="h-[18px] w-[18px] shrink-0" />
+          <item.icon
+            className={cn(
+              "h-[18px] w-[18px] shrink-0 transition-colors",
+              isActive ? "text-primary" : "text-muted-foreground/80 group-hover:text-sidebar-foreground",
+            )}
+          />
           <span className="flex-1">{item.label}</span>
           {showUnreadDot && (
             <span
@@ -154,13 +187,8 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       >
         {/* Logo row */}
         <div className="flex h-16 shrink-0 items-center justify-between gap-2 px-5">
-          <Link href="/dashboard" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 shadow-sm shadow-primary/30">
-              <MessageSquare className="h-[18px] w-[18px] text-primary-foreground" />
-            </div>
-            <span className="text-[15px] font-bold tracking-tight text-sidebar-foreground">
-              WPistic CRM
-            </span>
+          <Link href="/dashboard" aria-label="Chatbotistic — go to dashboard">
+            <BrandLogo />
           </Link>
           <button
             type="button"
@@ -174,10 +202,16 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
         {/* Main navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-2">
-          <p className="px-3 pb-2 pt-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-            Menu
-          </p>
-          <ul className="flex flex-col gap-1">{navItems.map(renderNavLink)}</ul>
+          {navSections.map((section) => (
+            <div key={section.heading} className="pb-1">
+              <p className="px-3 pb-1.5 pt-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                {section.heading}
+              </p>
+              <ul className="flex flex-col gap-1">
+                {section.items.map(renderNavLink)}
+              </ul>
+            </div>
+          ))}
 
           <div className="my-3 border-t border-sidebar-border" />
 

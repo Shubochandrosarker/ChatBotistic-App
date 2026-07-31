@@ -39,16 +39,28 @@ export default function DashboardPage() {
   return (
     <div className="space-y-5">
       {/* Hero header — static, paints instantly. */}
-      <div className="animate-rise relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary/70 p-6 text-primary-foreground elevation-2">
-        <div className="absolute -right-8 -top-10 h-40 w-40 rounded-full bg-white/10" />
-        <div className="absolute -bottom-14 right-20 h-32 w-32 rounded-full bg-white/[0.07]" />
+      <div className="animate-rise brand-surface relative overflow-hidden rounded-2xl p-6 elevation-2 sm:p-7">
+        {/* A hairline ring plus a blurred glow, both clipped by the
+            panel — depth without an image request. The glow is blurred
+            rather than a flat disc: at this size a hard-edged circle
+            reads as a rendering artifact instead of lighting. Offset
+            past the right edge so neither sits behind the text at any
+            breakpoint. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border border-current/10"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-10 -top-20 h-52 w-52 rounded-full bg-current/10 blur-3xl"
+        />
         <div className="relative">
-          <h1 className="font-heading text-2xl font-bold tracking-tight">
+          <h1 className="font-heading text-2xl font-extrabold tracking-tight sm:text-[28px]">
             Welcome back
           </h1>
-          <p className="mt-1 max-w-xl text-sm text-primary-foreground/80">
-            Live analytics across conversations, contacts, deals, broadcasts,
-            and automations.
+          <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-current/75">
+            Everything your chatbot and your team did today — conversations,
+            contacts, deals, broadcasts, and automations, live.
           </p>
         </div>
       </div>
