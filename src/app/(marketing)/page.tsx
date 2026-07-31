@@ -23,7 +23,7 @@ import { Reveal } from "@/components/marketing/reveal";
 import { HeroVisual } from "@/components/marketing/hero-visual";
 
 export const metadata: Metadata = {
-  title: "WhatsApp CRM for teams — inbox, broadcasts & automations",
+  title: "Every conversation in one place — inbox, broadcasts & automations",
 };
 
 const features = [
@@ -153,9 +153,11 @@ export default function LandingPage() {
 
             <Reveal delay={0.16}>
               <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground">
-                A multi-tenant WhatsApp CRM with a shared inbox, broadcast
-                campaigns, sales pipelines, and visual automations — running on
-                your own Meta, Twilio, or SMS gateway credentials.
+                Chatbotistic puts every WhatsApp and SMS conversation,
+                contact, and deal in one place — shared inbox, broadcast
+                campaigns, sales pipelines, chatbot widgets, and visual
+                automations, running on your own Meta, Twilio, or SMS gateway
+                credentials.
               </p>
             </Reveal>
 

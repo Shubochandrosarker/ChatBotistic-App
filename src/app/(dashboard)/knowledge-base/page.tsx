@@ -106,7 +106,7 @@ export default function KnowledgeBasePage() {
         </div>
         <Button
           onClick={() => setAddOpen(true)}
-          className="bg-emerald-600 text-white hover:bg-emerald-700"
+          className="bg-primary text-primary-foreground"
         >
           <Plus className="h-4 w-4" />
           Add Document
@@ -114,16 +114,35 @@ export default function KnowledgeBasePage() {
       </div>
 
       {!configured && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-          <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-400" />
-          <div className="text-sm text-amber-200">
-            <p className="font-medium">Cloudflare Workers AI is not configured</p>
-            <p className="mt-1 text-amber-200/80">
-              Set <code className="text-amber-100">CLOUDFLARE_ACCOUNT_ID</code> and{" "}
-              <code className="text-amber-100">CLOUDFLARE_API_TOKEN</code> in your
-              environment. Until then, documents cannot be embedded and the AI
-              Reply step will skip sending.
+        <div className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/10 p-4">
+          <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-warning" />
+          <div className="text-sm">
+            {/* These used to be amber-200/-100, which on the pale amber
+                fill was all but unreadable in light mode. The warning
+                token clears AA against the card in both themes. */}
+            <p className="font-medium text-foreground">
+              Cloudflare Workers AI is not configured
             </p>
+            <p className="mt-1 text-muted-foreground">
+              Set{" "}
+              <code className="font-mono text-foreground">
+                CLOUDFLARE_ACCOUNT_ID
+              </code>{" "}
+              and{" "}
+              <code className="font-mono text-foreground">
+                CLOUDFLARE_API_TOKEN
+              </code>{" "}
+              in your environment. Until then, documents cannot be embedded
+              and the AI Reply step will skip sending.
+            </p>
+            <a
+              href="https://github.com/shubochandrosarker/chatbotistic-app/blob/main/docs/cloudflare-workers-ai.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
+            >
+              Setup guide →
+            </a>
           </div>
         </div>
       )}
@@ -324,7 +343,7 @@ function AddDocumentDialog({
           <Button
             onClick={submit}
             disabled={saving}
-            className="bg-emerald-600 text-white hover:bg-emerald-700"
+            className="bg-primary text-primary-foreground"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             Add Document

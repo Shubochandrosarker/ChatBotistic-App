@@ -8,7 +8,7 @@ import "./marketing.css";
 export const metadata: Metadata = {
   robots: { index: true, follow: true },
   description:
-    "WPistic WhatsApp CRM — shared team inbox, broadcast campaigns, sales pipelines, and visual automations on Meta Cloud API, Twilio, or your own SMS gateway.",
+    "Chatbotistic — shared team inbox, broadcast campaigns, sales pipelines, chatbot widgets, and visual automations on Meta Cloud API, Twilio, or your own SMS gateway.",
 };
 
 export default function MarketingLayout({

@@ -41,11 +41,14 @@
 }
 
 .mk-gradient-text {
+  /* Kept inside the brand's green family — the old middle stop was a
+     violet-era blue, which now fights the green primary either side of
+     it. Teal and mint read as a sweep across one hue instead. */
   background-image: linear-gradient(
     100deg,
     var(--primary),
-    oklch(0.62 0.17 250),
-    oklch(0.62 0.16 155),
+    oklch(0.62 0.13 178),
+    oklch(0.7 0.15 158),
     var(--primary)
   );
   background-size: 250% 100%;

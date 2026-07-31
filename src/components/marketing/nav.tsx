@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Menu, MessageCircle, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils";
+import { BrandTile } from "@/components/brand/logo";
 
 const links = [
   { href: "/#features", label: "Features" },
@@ -40,11 +41,9 @@ export function MarketingNav() {
           className="flex items-center gap-2.5 font-semibold tracking-tight"
           onClick={() => setOpen(false)}
         >
-          <span className="flex size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-            <MessageCircle className="size-4.5" />
-          </span>
-          <span className="text-[15px]">
-            WPistic <span className="text-primary">WhatsApp CRM</span>
+          <BrandTile className="size-8 rounded-xl" />
+          <span className="brand-text font-heading text-[16px] font-extrabold tracking-[-0.02em]">
+            Chatbotistic
           </span>
         </Link>
 
