@@ -63,25 +63,6 @@ export async function provisionFromClaims(
     throw new Error(`Failed to attach user to organization: ${memberError.message}`)
   }
 
-  // Seed the white-label tenancy tag: WordPress subjects (wp-{id})
-  // inherit the connector's cbc-{id} tag so widgets created in the
-  // member portal are visible in this dashboard under the shared
-  // master account. Never overwrites an existing tag (migration 020).
-  const { error: tagError } = await admin.from('tochat_org_config').upsert(
-    {
-      org_id: org.id,
-      user_client: claims.sub.startsWith('wp-')
-        ? `cbc-${claims.sub.slice(3)}`
-        : `org-${org.id}`,
-    },
-    { onConflict: 'org_id', ignoreDuplicates: true },
-  )
-  if (tagError) {
-    // Non-fatal: a missing tag row falls back to the deterministic
-    // org-{id} default at read time. Logged, never thrown.
-    console.error('[sso] failed to seed tochat tenancy tag:', tagError.message)
-  }
-
   return { orgId: org.id }
 }
 

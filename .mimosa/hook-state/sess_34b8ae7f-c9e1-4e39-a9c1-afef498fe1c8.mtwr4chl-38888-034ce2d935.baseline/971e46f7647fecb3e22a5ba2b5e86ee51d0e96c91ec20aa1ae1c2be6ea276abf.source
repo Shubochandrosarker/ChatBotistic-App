@@ -153,8 +153,8 @@ export default function AgentsPage() {
       ) : configured === false ? (
         <EmptyState
           icon={UserRound}
-          title="Chatbotistic account not connected"
-          hint="Connect your white-label account in Settings → Chatbotistic to manage your agents here — you'll only see your own data."
+          title="Tochat.be not connected"
+          hint="Set TOCHAT_API_EMAIL and TOCHAT_API_PASSWORD in your environment, then restart the app to manage agents here."
         />
       ) : widgets.length === 0 ? (
         <EmptyState

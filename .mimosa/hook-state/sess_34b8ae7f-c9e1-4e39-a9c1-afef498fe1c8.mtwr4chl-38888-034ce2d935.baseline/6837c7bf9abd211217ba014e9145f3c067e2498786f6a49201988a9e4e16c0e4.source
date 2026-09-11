@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireOrgId } from '@/lib/api/require-org-id'
-import { orgLeadsApiKey } from '@/lib/tochat/org-config'
+import { createClient } from '@/lib/supabase/server'
 import {
   ChatbotisticError,
   fetchLeads,
@@ -10,12 +9,8 @@ import {
 /**
  * GET /api/leads?fromDate=YYYY-MM-DD&page=N
  *
- * Auth-gated, org-scoped proxy to the white-label leads API. When the
- * org has saved its own leads API key (Settings → Chatbotistic), that
- * key is used — the org sees only leads captured by its own widgets.
- * Otherwise the deployment-wide CHATBOTISTIC_API_KEY applies (shared
- * master-account leads). The key stays server-side; the browser only
- * ever talks to this route.
+ * Auth-gated proxy to the Chatbotistic leads API. The API key stays
+ * server-side; the browser only ever talks to this route.
  *
  * Response shape:
  *   { configured: false }                          — integration not set up
@@ -24,12 +19,17 @@ import {
  */
 export async function GET(request: Request) {
   try {
-    const { orgId, supabase, error: orgError } = await requireOrgId()
-    if (orgError) return orgError
+    const supabase = await createClient()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
 
-    const orgKey = await orgLeadsApiKey(supabase, orgId)
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    if (!orgKey && !isChatbotisticConfigured()) {
+    if (!isChatbotisticConfigured()) {
       return NextResponse.json({ configured: false }, { status: 200 })
     }
 
@@ -45,12 +45,7 @@ export async function GET(request: Request) {
     const pageParam = Number(searchParams.get('page'))
     const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1
 
-    const result = await fetchLeads({
-      fromDate,
-      page,
-      apiKey: orgKey?.key,
-      baseUrl: orgKey?.baseUrl ?? undefined,
-    })
+    const result = await fetchLeads({ fromDate, page })
 
     return NextResponse.json({
       configured: true,

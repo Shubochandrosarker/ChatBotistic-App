@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { TochatApiError, operators, resourceIdFromIri } from '@/lib/tochat/client'
-import { requireTochatScope } from '@/lib/api/tochat-route'
+import { TochatApiError, isTochatConfigured, operators, resourceIdFromIri } from '@/lib/tochat/client'
+import { requireOrgId } from '@/lib/api/require-org-id'
 import { operatorOwnedByOrg, widgetOwnedByOrg } from '@/lib/tochat/ownership'
 import { parseJsonBody } from '@/lib/api/parse-json-body'
 
@@ -9,10 +9,11 @@ import { parseJsonBody } from '@/lib/api/parse-json-body'
  * PUT /api/tochat/operators/{id}
  * DELETE /api/tochat/operators/{id}
  *
- * Ownership is verified before any read/write (see
- * src/lib/tochat/ownership.ts) — in shared mode by walking up to the
- * parent widget's `userClient` tag, in isolated mode by the org's own
- * account JWT.
+ * Same shared-master-account concern as /api/tochat/widgets/{id}: an
+ * operator id alone doesn't prove it's the caller's. Ownership is
+ * verified one level removed — resolve the operator's parent widget
+ * (`business`) and check *that* widget's `userClient` tag (see
+ * src/lib/tochat/ownership.ts).
  */
 
 export async function GET(
@@ -21,10 +22,13 @@ export async function GET(
 ) {
   const { id } = await params
   try {
-    const { scope, error } = await requireTochatScope()
+    const { orgId, error } = await requireOrgId()
     if (error) return error
+    if (!isTochatConfigured()) {
+      return NextResponse.json({ configured: false }, { status: 200 })
+    }
 
-    const operator = await operatorOwnedByOrg(scope, id)
+    const operator = await operatorOwnedByOrg(id, orgId)
     if (!operator) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     return NextResponse.json({ configured: true, operator })
@@ -43,10 +47,13 @@ export async function PUT(
 ) {
   const { id } = await params
   try {
-    const { scope, error } = await requireTochatScope()
+    const { orgId, error } = await requireOrgId()
     if (error) return error
+    if (!isTochatConfigured()) {
+      return NextResponse.json({ configured: false }, { status: 200 })
+    }
 
-    const existing = await operatorOwnedByOrg(scope, id)
+    const existing = await operatorOwnedByOrg(id, orgId)
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const { body: payload, error: parseError } = await parseJsonBody(request)
@@ -62,11 +69,11 @@ export async function PUT(
     // widget belongs to the same org; otherwise keep its current one —
     // re-derived as a plain IRI rather than re-sent as whatever shape
     // GET returned it in (a string IRI or an embedded {id, '@id'}
-    // object depending on the upstream serialization group), since PUT
+    // object depending on Tochat's serialization group), since PUT
     // expects the IRI form.
     let businessId: string | null
     if (typeof payload.business === 'string' && payload.business.trim()) {
-      const targetWidget = await widgetOwnedByOrg(scope, payload.business)
+      const targetWidget = await widgetOwnedByOrg(payload.business, orgId)
       if (!targetWidget) {
         return NextResponse.json({ error: 'Widget not found' }, { status: 404 })
       }
@@ -79,7 +86,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
 
-    const updated = await operators.update(scope, id, {
+    const updated = await operators.update(id, {
       ...payload,
       business: `/api/v2/widgets/${businessId}`,
     })
@@ -99,13 +106,16 @@ export async function DELETE(
 ) {
   const { id } = await params
   try {
-    const { scope, error } = await requireTochatScope()
+    const { orgId, error } = await requireOrgId()
     if (error) return error
+    if (!isTochatConfigured()) {
+      return NextResponse.json({ configured: false }, { status: 200 })
+    }
 
-    const existing = await operatorOwnedByOrg(scope, id)
+    const existing = await operatorOwnedByOrg(id, orgId)
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    await operators.remove(scope, id)
+    await operators.remove(id)
     return NextResponse.json({ configured: true, ok: true })
   } catch (err) {
     if (err instanceof TochatApiError) {

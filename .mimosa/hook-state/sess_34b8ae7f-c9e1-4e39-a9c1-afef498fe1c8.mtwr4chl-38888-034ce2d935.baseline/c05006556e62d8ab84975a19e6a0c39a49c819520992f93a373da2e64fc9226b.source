@@ -5,14 +5,10 @@ import { resolveOrgId } from '@/lib/supabase/org'
 /**
  * Auth + org resolution for API routes that need both. Returns a
  * ready-to-return NextResponse on failure so callers can just
- * `if (error) return error`. The Supabase client is handed back too —
- * routes that resolve per-org integration state (e.g. the white-label
- * scope in src/lib/tochat/org-config.ts) need it for one more
- * org-scoped query.
+ * `if (error) return error`.
  */
 export async function requireOrgId(): Promise<
-  | { orgId: string; supabase: Awaited<ReturnType<typeof createClient>>; error: null }
-  | { orgId: null; supabase: null; error: NextResponse }
+  { orgId: string; error: null } | { orgId: null; error: NextResponse }
 > {
   const supabase = await createClient()
   const {
@@ -21,17 +17,16 @@ export async function requireOrgId(): Promise<
   } = await supabase.auth.getUser()
 
   if (authError || !user) {
-    return { orgId: null, supabase: null, error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+    return { orgId: null, error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
   }
 
   const orgId = await resolveOrgId(supabase)
   if (!orgId) {
     return {
       orgId: null,
-      supabase: null,
       error: NextResponse.json({ error: 'No organization for this account' }, { status: 404 }),
     }
   }
 
-  return { orgId, supabase, error: null }
+  return { orgId, error: null }
 }
