@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
-import { TochatApiError, widgets } from '@/lib/tochat/client'
-import { requireTochatScope } from '@/lib/api/tochat-route'
+import { TochatApiError, isTochatConfigured, widgets } from '@/lib/tochat/client'
+import { tochatUserClientForOrg } from '@/lib/tochat/org'
+import { requireOrgId } from '@/lib/api/require-org-id'
 import { widgetOwnedByOrg } from '@/lib/tochat/ownership'
 import { parseJsonBody } from '@/lib/api/parse-json-body'
 
@@ -9,11 +10,15 @@ import { parseJsonBody } from '@/lib/api/parse-json-body'
  * PUT /api/tochat/widgets/{id}
  * DELETE /api/tochat/widgets/{id}
  *
- * A widget id is not itself a secret and the upstream API does not
- * scope by caller in shared mode. Every handler re-fetches the widget
- * first and verifies ownership (src/lib/tochat/ownership.ts — tag walk
- * in shared mode, JWT scope in isolated mode), so one org can never
- * read, edit or delete another org's widget by guessing its id.
+ * Tochat.be is a single shared master account across every org on this
+ * platform — a widget id is not itself a secret, and the API's own
+ * `/api/v2/widgets/{id}` endpoint does not scope by caller. Every write
+ * below re-fetches the widget first and verifies its `userClient` tag
+ * matches the caller's org before touching it, so one org can never
+ * edit or delete another org's widget by guessing/knowing its id (see
+ * src/lib/tochat/ownership.ts and the "keep the re-fetch-and-verify
+ * ownership checks" note in
+ * ChatBotistic-System-Management/docs/CHATBOTISTIC-DASHBOARD-MASTER-PLAN.md).
  */
 
 export async function GET(
@@ -22,10 +27,13 @@ export async function GET(
 ) {
   const { id } = await params
   try {
-    const { scope, error } = await requireTochatScope()
+    const { orgId, error } = await requireOrgId()
     if (error) return error
+    if (!isTochatConfigured()) {
+      return NextResponse.json({ configured: false }, { status: 200 })
+    }
 
-    const widget = await widgetOwnedByOrg(scope, id)
+    const widget = await widgetOwnedByOrg(id, orgId)
     if (!widget) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     return NextResponse.json({ configured: true, widget })
@@ -44,10 +52,13 @@ export async function PUT(
 ) {
   const { id } = await params
   try {
-    const { scope, error } = await requireTochatScope()
+    const { orgId, error } = await requireOrgId()
     if (error) return error
+    if (!isTochatConfigured()) {
+      return NextResponse.json({ configured: false }, { status: 200 })
+    }
 
-    const existing = await widgetOwnedByOrg(scope, id)
+    const existing = await widgetOwnedByOrg(id, orgId)
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const { body: payload, error: parseError } = await parseJsonBody(request)
@@ -56,14 +67,11 @@ export async function PUT(
       return NextResponse.json({ error: '`name` is required' }, { status: 400 })
     }
 
-    // userClient is never client-writable. In shared mode it is always
-    // re-derived from the caller's own tag; in isolated mode it is
-    // stripped from the payload so the account's own grouping is
-    // preserved untouched.
-    const { userClient, ...rest } = payload
-    const updated = await widgets.update(scope, id, {
-      ...rest,
-      ...(scope.userClient ? { userClient: scope.userClient } : {}),
+    // userClient is never client-writable — always re-derived from the
+    // caller's own org, overriding anything the request body sent.
+    const updated = await widgets.update(id, {
+      ...payload,
+      userClient: tochatUserClientForOrg(orgId),
     })
 
     return NextResponse.json({ configured: true, widget: updated })
@@ -82,13 +90,16 @@ export async function DELETE(
 ) {
   const { id } = await params
   try {
-    const { scope, error } = await requireTochatScope()
+    const { orgId, error } = await requireOrgId()
     if (error) return error
+    if (!isTochatConfigured()) {
+      return NextResponse.json({ configured: false }, { status: 200 })
+    }
 
-    const existing = await widgetOwnedByOrg(scope, id)
+    const existing = await widgetOwnedByOrg(id, orgId)
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    await widgets.remove(scope, id)
+    await widgets.remove(id)
     return NextResponse.json({ configured: true, ok: true })
   } catch (err) {
     if (err instanceof TochatApiError) {

@@ -1,40 +1,39 @@
 import { NextResponse } from 'next/server'
-import { TochatApiError, isTochatConfigured, tochatPublicBase, widgets } from '@/lib/tochat/client'
-import { tochatUserClientForOrg } from '@/lib/tochat/org'
-import { requireOrgId } from '@/lib/api/require-org-id'
+import { TochatApiError, tochatPublicBase, widgets } from '@/lib/tochat/client'
+import { requireTochatScope } from '@/lib/api/tochat-route'
+import { orgEntitlements, limitReached } from '@/lib/tochat/entitlements'
 import { parseJsonBody } from '@/lib/api/parse-json-body'
 
 /**
  * GET /api/tochat/widgets
  * POST /api/tochat/widgets
  *
- * Thin, org-scoped proxy to the Tochat.be widgets resource — the first
- * slice of the Widget Studio integration. The master Tochat.be
- * credentials never leave the server; every call is scoped to the
- * signed-in user's org via the `userClient` tag.
+ * Thin, org-scoped proxy to the white-label widgets resource. The
+ * caller's scope decides isolation (src/lib/tochat/org-config.ts):
+ * orgs that connected their own account run entirely inside it, and
+ * everyone else is scoped by their `userClient` tag inside the shared
+ * master account. Credentials never leave the server.
+ *
+ * POST enforces the org's plan entitlement (organizations.widget_limit,
+ * synced from the SSO bridge) — null/negative means unlimited.
  *
  * Response shape:
- *   { configured: false }                    — TOCHAT_API_EMAIL/PASSWORD not set
+ *   { configured: false }                    — no account connected
  *   { configured: true, widgets: [...] }      — GET
  *   { configured: true, widget: {...} }       — POST
  *   { error: '...' }                          — on failure
  */
 export async function GET() {
   try {
-    const { orgId, error } = await requireOrgId()
+    const { scope, error } = await requireTochatScope()
     if (error) return error
 
-    if (!isTochatConfigured()) {
-      return NextResponse.json({ configured: false }, { status: 200 })
-    }
-
-    const userClient = tochatUserClientForOrg(orgId)
-    const list = await widgets.list(userClient)
+    const list = await widgets.list(scope)
 
     return NextResponse.json({
       configured: true,
       widgets: list,
-      embedBaseUrl: tochatPublicBase(),
+      embedBaseUrl: tochatPublicBase(scope),
     })
   } catch (err) {
     if (err instanceof TochatApiError) {
@@ -47,12 +46,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { orgId, error } = await requireOrgId()
+    const { orgId, supabase, scope, error } = await requireTochatScope()
     if (error) return error
-
-    if (!isTochatConfigured()) {
-      return NextResponse.json({ configured: false }, { status: 200 })
-    }
 
     const { body: payload, error: parseError } = await parseJsonBody(request)
     if (parseError) return parseError
@@ -60,8 +55,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '`name` is required' }, { status: 400 })
     }
 
-    const userClient = tochatUserClientForOrg(orgId)
-    const created = await widgets.create({ ...payload, userClient })
+    const entitlements = await orgEntitlements(supabase, orgId)
+    if (limitReached(entitlements.widget_limit, (await widgets.list(scope)).length)) {
+      return NextResponse.json(
+        {
+          error:
+            entitlements.widget_limit != null && entitlements.widget_limit >= 0
+              ? `Your ${entitlements.plan ?? 'current'} plan allows ${entitlements.widget_limit} widget(s). Upgrade to add more.`
+              : 'Widget limit reached for your plan.',
+          limit: entitlements.widget_limit,
+        },
+        { status: 403 },
+      )
+    }
+
+    const created = await widgets.create(scope, payload)
 
     return NextResponse.json({ configured: true, widget: created }, { status: 201 })
   } catch (err) {

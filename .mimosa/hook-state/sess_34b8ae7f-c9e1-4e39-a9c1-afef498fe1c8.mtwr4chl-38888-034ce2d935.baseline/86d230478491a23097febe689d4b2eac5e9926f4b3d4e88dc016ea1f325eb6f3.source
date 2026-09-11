@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { TochatApiError, bookingConfigs } from '@/lib/tochat/client'
-import { requireTochatScope } from '@/lib/api/tochat-route'
+import { TochatApiError, isTochatConfigured, bookingConfigs } from '@/lib/tochat/client'
+import { requireOrgId } from '@/lib/api/require-org-id'
 import { operatorOwnedByOrg } from '@/lib/tochat/ownership'
 import { parseJsonBody } from '@/lib/api/parse-json-body'
 import {
@@ -24,18 +24,21 @@ import {
  */
 export async function GET(request: Request) {
   try {
-    const { scope, error } = await requireTochatScope()
+    const { orgId, error } = await requireOrgId()
     if (error) return error
+    if (!isTochatConfigured()) {
+      return NextResponse.json({ configured: false }, { status: 200 })
+    }
 
     const operatorId = new URL(request.url).searchParams.get('operatorId')
     if (!operatorId) {
       return NextResponse.json({ error: '`operatorId` query param is required' }, { status: 400 })
     }
 
-    const operator = await operatorOwnedByOrg(scope, operatorId)
+    const operator = await operatorOwnedByOrg(operatorId, orgId)
     if (!operator) return NextResponse.json({ error: 'Agent not found' }, { status: 404 })
 
-    const list = await bookingConfigs.list(scope, operatorId)
+    const list = await bookingConfigs.list(operatorId)
     return NextResponse.json({ configured: true, bookingConfigs: list })
   } catch (err) {
     if (err instanceof TochatApiError) {
@@ -48,8 +51,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { scope, error } = await requireTochatScope()
+    const { orgId, error } = await requireOrgId()
     if (error) return error
+    if (!isTochatConfigured()) {
+      return NextResponse.json({ configured: false }, { status: 200 })
+    }
 
     const { body: payload, error: parseError } = await parseJsonBody(request)
     if (parseError) return parseError
@@ -61,10 +67,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: validationError }, { status: 400 })
     }
 
-    const operator = await operatorOwnedByOrg(scope, payload.operatorId)
+    const operator = await operatorOwnedByOrg(payload.operatorId, orgId)
     if (!operator) return NextResponse.json({ error: 'Agent not found' }, { status: 404 })
 
-    const created = await bookingConfigs.create(scope, {
+    const created = await bookingConfigs.create({
       whatsapp: `/api/v2/whatsapp_operators/${payload.operatorId}`,
       ...normalizeBookingConfigPayload(payload),
     })

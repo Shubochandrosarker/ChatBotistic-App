@@ -42,7 +42,7 @@ interface WidgetsResponse {
 export default function WidgetsPage() {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [widgets, setWidgets] = useState<TochatWidget[]>([]);
-  const [embedBaseUrl, setEmbedBaseUrl] = useState('https://app.chatbotistic.com');
+  const [embedBaseUrl, setEmbedBaseUrl] = useState('https://services.tochat.be');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -152,8 +152,8 @@ export default function WidgetsPage() {
       ) : configured === false ? (
         <EmptyState
           icon={MessageSquareText}
-          title="Chatbotistic account not connected"
-          hint="Connect your white-label account in Settings → Chatbotistic to manage your widgets here — you'll only see your own data."
+          title="Tochat.be not connected"
+          hint="Set TOCHAT_API_EMAIL and TOCHAT_API_PASSWORD in your environment, then restart the app to manage widgets here."
         />
       ) : widgets.length === 0 ? (
         <EmptyState

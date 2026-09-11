@@ -9,10 +9,34 @@ function jsonResponse(status: number, body: unknown) {
   })
 }
 
+/** A shared-master-account scope (tag-scoped inside one account). */
+async function sharedScope() {
+  const { normalizeTochatBase } = await import('./client')
+  return {
+    orgId: 'org-uuid-1',
+    mode: 'shared' as const,
+    email: 'master@example.com',
+    password: 'secret',
+    base: normalizeTochatBase(null),
+    userClient: 'org-abc',
+  }
+}
+
+/** An isolated scope — the org's own white-label account. */
+async function isolatedScope() {
+  const { normalizeTochatBase } = await import('./client')
+  return {
+    orgId: 'org-uuid-2',
+    mode: 'isolated' as const,
+    email: 'customer@example.com',
+    password: 'their-secret',
+    base: normalizeTochatBase(null),
+    userClient: null,
+  }
+}
+
 describe('tochat client', () => {
   beforeEach(() => {
-    process.env.TOCHAT_API_EMAIL = 'master@example.com'
-    process.env.TOCHAT_API_PASSWORD = 'secret'
     vi.resetModules()
   })
 
@@ -21,14 +45,7 @@ describe('tochat client', () => {
     vi.restoreAllMocks()
   })
 
-  it('isTochatConfigured is false when credentials are unset', async () => {
-    delete process.env.TOCHAT_API_EMAIL
-    delete process.env.TOCHAT_API_PASSWORD
-    const { isTochatConfigured } = await import('./client')
-    expect(isTochatConfigured()).toBe(false)
-  })
-
-  it('logs in once, caches the token, and scopes the widget list by userClient', async () => {
+  it('logs in once, caches the token per account, and scopes the shared-mode widget list by userClient', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse(200, { token: 'jwt-1' }))
@@ -41,8 +58,9 @@ describe('tochat client', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const { widgets } = await import('./client')
-    const first = await widgets.list('org-abc')
-    const second = await widgets.list('org-abc')
+    const scope = await sharedScope()
+    const first = await widgets.list(scope)
+    const second = await widgets.list(scope)
 
     expect(first).toEqual([{ id: 'w1', name: 'Sales' }])
     expect(second).toEqual([{ id: 'w2', name: 'Support' }])
@@ -50,6 +68,69 @@ describe('tochat client', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3)
     expect(fetchMock.mock.calls[0][0]).toContain('/api/authentication_token')
     expect(fetchMock.mock.calls[1][0]).toContain('userClient%5B%5D=org-abc')
+  })
+
+  it('isolated-mode lists carry NO userClient tag — the account JWT is the only scope', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(200, { token: 'jwt-cust' }))
+      .mockResolvedValueOnce(jsonResponse(200, { 'hydra:member': [{ id: 'w9' }] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { widgets } = await import('./client')
+    const scope = await isolatedScope()
+    await widgets.list(scope)
+
+    expect(fetchMock.mock.calls[1][0]).not.toContain('userClient')
+  })
+
+  it('isolated-mode creates do not stamp a userClient onto the payload', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(200, { token: 'jwt-cust' }))
+      .mockResolvedValueOnce(jsonResponse(201, { id: 'w10', name: 'X' }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { widgets } = await import('./client')
+    const scope = await isolatedScope()
+    await widgets.create(scope, { name: 'X' })
+
+    const sentBody = JSON.parse((fetchMock.mock.calls[1][1]?.body as string) ?? '{}')
+    expect(sentBody).not.toHaveProperty('userClient')
+  })
+
+  it('shared-mode creates stamp the org tag onto the payload', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(200, { token: 'jwt-1' }))
+      .mockResolvedValueOnce(jsonResponse(201, { id: 'w11', name: 'Y' }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { widgets } = await import('./client')
+    const scope = await sharedScope()
+    await widgets.create(scope, { name: 'Y' })
+
+    const sentBody = JSON.parse((fetchMock.mock.calls[1][1]?.body as string) ?? '{}')
+    expect(sentBody.userClient).toBe('org-abc')
+  })
+
+  it('keeps tokens separate per account (isolated and master never share a cache slot)', async () => {
+    const fetchMock = vi
+      .fn()
+      // isolated login + list
+      .mockResolvedValueOnce(jsonResponse(200, { token: 'jwt-cust' }))
+      .mockResolvedValueOnce(jsonResponse(200, { 'hydra:member': [] }))
+      // master login + list (must log in again — different account)
+      .mockResolvedValueOnce(jsonResponse(200, { token: 'jwt-master' }))
+      .mockResolvedValueOnce(jsonResponse(200, { 'hydra:member': [] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { widgets } = await import('./client')
+    await widgets.list(await isolatedScope())
+    await widgets.list(await sharedScope())
+
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+    expect(fetchMock.mock.calls[2][0]).toContain('/api/authentication_token')
   })
 
   it('clears the cached token and retries once on a 401, carrying the fresh token', async () => {
@@ -62,7 +143,8 @@ describe('tochat client', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const { widgets } = await import('./client')
-    const result = await widgets.list('org-abc')
+    const scope = await sharedScope()
+    const result = await widgets.list(scope)
 
     expect(result).toEqual([])
     expect(fetchMock).toHaveBeenCalledTimes(4)
@@ -83,7 +165,8 @@ describe('tochat client', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const { widgets } = await import('./client')
-    await expect(widgets.list('org-abc')).rejects.toMatchObject({
+    const scope = await sharedScope()
+    await expect(widgets.list(scope)).rejects.toMatchObject({
       name: 'TochatApiError',
       status: 401,
     })
@@ -101,18 +184,44 @@ describe('tochat client', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const { widgets } = await import('./client')
-    await expect(widgets.create({})).rejects.toMatchObject({
+    const scope = await sharedScope()
+    await expect(widgets.create(scope, {})).rejects.toMatchObject({
       name: 'TochatApiError',
       status: 422,
       message: '`name` is required',
     })
   })
+
+  it('verifyTochatLogin throws a 401 TochatApiError on bad credentials', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(401, { code: 401, message: 'Invalid credentials.' }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { verifyTochatLogin } = await import('./client')
+    await expect(
+      verifyTochatLogin('x@example.com', 'wrong', 'https://app.chatbotistic.com'),
+    ).rejects.toMatchObject({ name: 'TochatApiError', status: 401 })
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://app.chatbotistic.com/api/authentication_token',
+    )
+  })
+
+  it('verifyTochatLogin resolves when the API returns a token', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { token: 'ok' }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { verifyTochatLogin } = await import('./client')
+    await expect(
+      verifyTochatLogin('x@example.com', 'right'),
+    ).resolves.toBeUndefined()
+  })
 })
 
-describe('tochatUserClientForOrg', () => {
-  it('derives a deterministic userClient tag from the org id', async () => {
-    const { tochatUserClientForOrg } = await import('./org')
+describe('tochatUserClientForOrg / tochatUserClientForWpUser', () => {
+  it('derives deterministic tags', async () => {
+    const { tochatUserClientForOrg, tochatUserClientForWpUser } = await import('./org')
     expect(tochatUserClientForOrg('abc-123')).toBe('org-abc-123')
+    expect(tochatUserClientForWpUser(42)).toBe('cbc-42')
+    expect(tochatUserClientForWpUser('77')).toBe('cbc-77')
   })
 })
 

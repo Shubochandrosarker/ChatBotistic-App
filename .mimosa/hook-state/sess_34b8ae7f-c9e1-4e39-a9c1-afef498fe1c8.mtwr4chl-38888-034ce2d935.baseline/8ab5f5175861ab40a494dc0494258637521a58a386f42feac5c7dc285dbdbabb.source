@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import {
   TochatApiError,
+  isTochatConfigured,
   bookingConfigs,
   resourceIdFromIri,
 } from '@/lib/tochat/client'
-import { requireTochatScope } from '@/lib/api/tochat-route'
+import { requireOrgId } from '@/lib/api/require-org-id'
 import { bookingConfigOwnedByOrg } from '@/lib/tochat/ownership'
 import { parseJsonBody } from '@/lib/api/parse-json-body'
 import {
@@ -27,10 +28,13 @@ export async function GET(
 ) {
   const { id } = await params
   try {
-    const { scope, error } = await requireTochatScope()
+    const { orgId, error } = await requireOrgId()
     if (error) return error
+    if (!isTochatConfigured()) {
+      return NextResponse.json({ configured: false }, { status: 200 })
+    }
 
-    const config = await bookingConfigOwnedByOrg(scope, id)
+    const config = await bookingConfigOwnedByOrg(id, orgId)
     if (!config) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     return NextResponse.json({ configured: true, bookingConfig: config })
@@ -49,10 +53,13 @@ export async function PUT(
 ) {
   const { id } = await params
   try {
-    const { scope, error } = await requireTochatScope()
+    const { orgId, error } = await requireOrgId()
     if (error) return error
+    if (!isTochatConfigured()) {
+      return NextResponse.json({ configured: false }, { status: 200 })
+    }
 
-    const existing = await bookingConfigOwnedByOrg(scope, id)
+    const existing = await bookingConfigOwnedByOrg(id, orgId)
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const { body: payload, error: parseError } = await parseJsonBody(request)
@@ -71,7 +78,7 @@ export async function PUT(
       console.error('[api/tochat/booking-configs/:id] existing.whatsapp had an unrecognized shape:', existing.whatsapp)
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
-    const updated = await bookingConfigs.update(scope, id, {
+    const updated = await bookingConfigs.update(id, {
       whatsapp: `/api/v2/whatsapp_operators/${operatorId}`,
       ...normalizeBookingConfigPayload(payload),
     })
@@ -92,13 +99,16 @@ export async function DELETE(
 ) {
   const { id } = await params
   try {
-    const { scope, error } = await requireTochatScope()
+    const { orgId, error } = await requireOrgId()
     if (error) return error
+    if (!isTochatConfigured()) {
+      return NextResponse.json({ configured: false }, { status: 200 })
+    }
 
-    const existing = await bookingConfigOwnedByOrg(scope, id)
+    const existing = await bookingConfigOwnedByOrg(id, orgId)
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    await bookingConfigs.remove(scope, id)
+    await bookingConfigs.remove(id)
     return NextResponse.json({ configured: true, ok: true })
   } catch (err) {
     if (err instanceof TochatApiError) {

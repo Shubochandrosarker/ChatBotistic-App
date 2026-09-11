@@ -173,21 +173,14 @@ const PAGE_SIZE_HINT = 20
 
 /**
  * Fetch one page of leads captured on or after `fromDate` (YYYY-MM-DD).
- * `apiKey`/`baseUrl` let callers use an org's own key (per-tenant
- * leads isolation — src/lib/tochat/org-config.ts); when omitted the
- * deployment-wide CHATBOTISTIC_API_KEY is used.
  * Throws ChatbotisticError on a non-2xx response or misconfiguration.
  */
 export async function fetchLeads(params: {
   fromDate: string
   page?: number
-  apiKey?: string
-  baseUrl?: string | null
 }): Promise<LeadsResult> {
   const page = Math.max(1, params.page ?? 1)
-  const origin = (params.baseUrl || baseUrl()).replace(/\/+$/, '')
-  const key = params.apiKey || apiKey()
-  const url = new URL(`${origin}/api/get-json-lead`)
+  const url = new URL(`${baseUrl()}/api/get-json-lead`)
   url.searchParams.set('fromDate', params.fromDate)
   url.searchParams.set('page', String(page))
 
@@ -196,7 +189,7 @@ export async function fetchLeads(params: {
     response = await fetch(url, {
       method: 'GET',
       headers: {
-        Authorization: key,
+        Authorization: apiKey(),
         Accept: 'application/json',
       },
       // Leads change over time — never serve a stale cached page.

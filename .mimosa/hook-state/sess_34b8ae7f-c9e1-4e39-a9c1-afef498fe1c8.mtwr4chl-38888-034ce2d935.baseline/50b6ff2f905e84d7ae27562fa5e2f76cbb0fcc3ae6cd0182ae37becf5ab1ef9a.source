@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import {
   TochatApiError,
+  isTochatConfigured,
   faqGroups,
   resourceIdFromIri,
   type TochatFaq,
 } from '@/lib/tochat/client'
-import { requireTochatScope } from '@/lib/api/tochat-route'
+import { requireOrgId } from '@/lib/api/require-org-id'
 import { faqGroupOwnedByOrg } from '@/lib/tochat/ownership'
 import { parseJsonBody } from '@/lib/api/parse-json-body'
 
@@ -40,10 +41,13 @@ export async function GET(
 ) {
   const { id } = await params
   try {
-    const { scope, error } = await requireTochatScope()
+    const { orgId, error } = await requireOrgId()
     if (error) return error
+    if (!isTochatConfigured()) {
+      return NextResponse.json({ configured: false }, { status: 200 })
+    }
 
-    const group = await faqGroupOwnedByOrg(scope, id)
+    const group = await faqGroupOwnedByOrg(id, orgId)
     if (!group) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     return NextResponse.json({ configured: true, faqGroup: group })
@@ -62,10 +66,13 @@ export async function PUT(
 ) {
   const { id } = await params
   try {
-    const { scope, error } = await requireTochatScope()
+    const { orgId, error } = await requireOrgId()
     if (error) return error
+    if (!isTochatConfigured()) {
+      return NextResponse.json({ configured: false }, { status: 200 })
+    }
 
-    const existing = await faqGroupOwnedByOrg(scope, id)
+    const existing = await faqGroupOwnedByOrg(id, orgId)
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const { body: payload, error: parseError } = await parseJsonBody(request)
@@ -92,7 +99,7 @@ export async function PUT(
       console.error('[api/tochat/faq-groups/:id] existing.whatsapp had an unrecognized shape:', existing.whatsapp)
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
-    const updated = await faqGroups.update(scope, id, {
+    const updated = await faqGroups.update(id, {
       title: payload.title.trim(),
       whatsapp: `/api/v2/whatsapp_operators/${operatorId}`,
       faqs: payload.faqs,
@@ -114,13 +121,16 @@ export async function DELETE(
 ) {
   const { id } = await params
   try {
-    const { scope, error } = await requireTochatScope()
+    const { orgId, error } = await requireOrgId()
     if (error) return error
+    if (!isTochatConfigured()) {
+      return NextResponse.json({ configured: false }, { status: 200 })
+    }
 
-    const existing = await faqGroupOwnedByOrg(scope, id)
+    const existing = await faqGroupOwnedByOrg(id, orgId)
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    await faqGroups.remove(scope, id)
+    await faqGroups.remove(id)
     return NextResponse.json({ configured: true, ok: true })
   } catch (err) {
     if (err instanceof TochatApiError) {
