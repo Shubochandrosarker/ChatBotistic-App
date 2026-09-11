@@ -23,6 +23,26 @@ import { parseJsonBody } from '@/lib/api/parse-json-body'
  * connect/disconnect unchanged.
  */
 
+/**
+ * True only for IPv4 literals outside loopback / private / link-local /
+ * reserved ranges. IPv6 literals are refused (the white-label API is a
+ * public DNS name; a literal IPv6 origin has no legitimate use here).
+ */
+function isPublicIpv4(host: string): boolean {
+  const parts = host.split('.')
+  if (parts.length !== 4) return false
+  const octets = parts.map((p) => Number(p))
+  if (octets.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return false
+  const [a, b] = octets as [number, number, number, number]
+  if (a === 127 || a === 10 || a === 0) return false
+  if (a === 172 && b >= 16 && b <= 31) return false
+  if (a === 192 && b === 168) return false
+  if (a === 169 && b === 254) return false
+  if (a === 127) return false
+  if (a >= 224) return false // multicast + reserved
+  return true
+}
+
 export async function GET() {
   try {
     const { orgId, supabase, error } = await requireOrgId()
@@ -59,6 +79,19 @@ export async function POST(request: Request) {
         const parsed = new URL(apiBase)
         if (parsed.protocol !== 'https:') {
           return NextResponse.json({ error: '`apiBase` must use https' }, { status: 400 })
+        }
+        // SSRF guard: the origin is fetched server-side with credentials,
+        // so loopback / private / link-local hosts are refused outright.
+        const host = parsed.hostname.toLowerCase()
+        const isIp = /^[0-9.]+$/.test(host) || host.includes(':')
+        if (
+          host === 'localhost' ||
+          host.endsWith('.localhost') ||
+          host.endsWith('.internal') ||
+          host === 'metadata.google.internal' ||
+          (isIp && !isPublicIpv4(host))
+        ) {
+          return NextResponse.json({ error: '`apiBase` must be a public host' }, { status: 400 })
         }
       } catch {
         return NextResponse.json({ error: '`apiBase` is not a valid URL' }, { status: 400 })

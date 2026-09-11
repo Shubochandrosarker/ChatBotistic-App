@@ -1,14 +1,14 @@
 {
   "schemaVersion": "mimosa-hook-status/v1",
-  "recordedAt": "2026-09-11T09:42:44.626Z",
+  "recordedAt": "2026-09-11T09:46:25.310Z",
   "sessionId": "sess_34b8ae7f-c9e1-4e39-a9c1-afef498fe1c8",
   "event": "PostToolUse",
   "toolName": "Edit",
-  "file": "src/lib/tochat/org-config.ts",
+  "file": "src/app/api/tochat/config/route.ts",
   "outcome": "clear",
   "coverage": "complete",
   "findingCount": 0,
-  "durationMs": 65,
+  "durationMs": 35,
   "hostState": "hook_complete",
   "reportHint": ".mimosa/reports/"
 }
