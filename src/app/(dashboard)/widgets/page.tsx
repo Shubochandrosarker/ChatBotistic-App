@@ -35,14 +35,12 @@ import type { TochatWidget } from '@/lib/tochat/client';
 interface WidgetsResponse {
   configured: boolean;
   widgets?: TochatWidget[];
-  embedBaseUrl?: string;
   error?: string;
 }
 
 export default function WidgetsPage() {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [widgets, setWidgets] = useState<TochatWidget[]>([]);
-  const [embedBaseUrl, setEmbedBaseUrl] = useState('https://services.tochat.be');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,7 +61,6 @@ export default function WidgetsPage() {
       } else {
         setConfigured(data.configured);
         setWidgets(data.widgets ?? []);
-        if (data.embedBaseUrl) setEmbedBaseUrl(data.embedBaseUrl);
       }
     } catch {
       setError('Could not reach the server');
@@ -190,7 +187,6 @@ export default function WidgetsPage() {
         open={!!embedWidget}
         onOpenChange={(v) => !v && setEmbedWidget(null)}
         widget={embedWidget}
-        embedBaseUrl={embedBaseUrl}
       />
 
       <Dialog
@@ -244,7 +240,7 @@ function WidgetCard({
   onEmbed: () => void;
 }) {
   return (
-    <li className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4">
+    <li className="surface-gloss flex flex-col gap-3 rounded-xl border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <span

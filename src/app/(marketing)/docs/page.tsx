@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "API Documentation",
   description:
     "REST API reference for Chatbotistic — configuration, messaging, broadcasts, webhooks, SMS compliance, SSO, and self-hosting.",
+  alternates: { canonical: "/docs" },
 };
 
 /* ------------------------------------------------------------------ */
@@ -549,13 +550,12 @@ export default function DocsPage() {
               <p>
                 List the signed-in org&apos;s widgets. The response also
                 includes{' '}
-                <code className="font-mono text-[13px]">embedBaseUrl</code>{' '}
-                — the Tochat.be API origin — so the UI can build embed
-                script URLs (
-                <code className="font-mono text-[13px]">
-                  {'{embedBaseUrl}'}/widget/{'{id}'}/load.js
+                <code className="font-mono text-[13px]">installBaseUrl</code>{' '}
+                for the branded install origin. The supported snippet is{' '}
+                <code className="font-mono text-[13px] break-all">
+                  &lt;script defer src=&quot;https://app.chatbotistic.com/install-widget/bundle.js?key={'{id}'}&quot;&gt;&lt;/script&gt;
                 </code>
-                ) without hardcoding it.
+                . The provider API remains server-side on services.tochat.be.
               </p>
             </Endpoint>
             <Endpoint method="POST" path="/api/tochat/widgets">
@@ -671,6 +671,19 @@ export default function DocsPage() {
             </Endpoint>
             <Endpoint method="DELETE" path="/api/tochat/faq-groups/{id}">
               <p>Delete a FAQ group, after the same ownership check.</p>
+            </Endpoint>
+            <Endpoint method="POST" path="/api/tochat/faq-groups/scan">
+              <p>
+                Generate an editable FAQ draft from a public sitemap, a list of
+                website URLs, or approved custom text. Send{' '}
+                <code className="font-mono text-[13px]">operatorId</code>,{' '}
+                <code className="font-mono text-[13px]">mode</code> ({'`sitemap`'}, {'`urls`'}, or {'`text`'}), and the matching{' '}
+                <code className="font-mono text-[13px]">sitemapUrl</code>,{' '}
+                <code className="font-mono text-[13px]">urls</code>, or{' '}
+                <code className="font-mono text-[13px]">text</code> field. The
+                route validates the agent&apos;s organization ownership and
+                returns FAQ pairs for review; it does not write to Tochat.be.
+              </p>
             </Endpoint>
           </Section>
 

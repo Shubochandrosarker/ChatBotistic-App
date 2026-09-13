@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { TochatApiError, tochatPublicBase, widgets } from '@/lib/tochat/client'
+import { TochatApiError, widgets } from '@/lib/tochat/client'
 import { requireTochatScope } from '@/lib/api/tochat-route'
 import { orgEntitlements, limitReached } from '@/lib/tochat/entitlements'
 import { parseJsonBody } from '@/lib/api/parse-json-body'
@@ -33,7 +33,7 @@ export async function GET() {
     return NextResponse.json({
       configured: true,
       widgets: list,
-      embedBaseUrl: tochatPublicBase(scope),
+      installBaseUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://app.chatbotistic.com',
     })
   } catch (err) {
     if (err instanceof TochatApiError) {

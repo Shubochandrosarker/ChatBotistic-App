@@ -11,7 +11,27 @@ export async function proxy(request: NextRequest) {
       ', '
     )}. NEXT_PUBLIC_* values are baked into the app at build time — set the real values from Supabase Project Settings > API in the build environment, then rebuild and redeploy. Saving them in the hosting panel after the fact has no effect on an already-built app.`;
 
-    if (request.nextUrl.pathname.startsWith('/api/')) {
+    const pathname = request.nextUrl.pathname;
+    const publicWithoutAuth =
+      pathname === '/' ||
+      pathname === '/pricing' ||
+      pathname === '/docs' ||
+      pathname === '/robots.txt' ||
+      pathname === '/sitemap.xml' ||
+      pathname === '/llms.txt' ||
+      pathname === '/llms-full.txt' ||
+      pathname === '/manifest.webmanifest' ||
+      pathname === '/icon' ||
+      pathname === '/apple-icon' ||
+      pathname.startsWith('/install-widget/');
+
+    // Public marketing, indexing, and widget-loader routes do not need a
+    // Supabase session. Keeping them available makes SEO and widget installs
+    // resilient while the operator is completing deployment configuration;
+    // every API and protected dashboard route still fails closed below.
+    if (publicWithoutAuth) return supabaseResponse;
+
+    if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: message }, { status: 503 });
     }
 

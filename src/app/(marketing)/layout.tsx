@@ -6,6 +6,15 @@ import "./marketing.css";
 // The app shell is noindex (see the root layout); the public marketing
 // and docs pages are the one part of the product that should be crawled.
 export const metadata: Metadata = {
+  metadataBase: new URL("https://app.chatbotistic.com"),
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "Chatbotistic",
+    title: "Chatbotistic — WhatsApp CRM and automation workspace",
+    description: "Bring your customer conversations, team inbox, chatbot widgets, and follow-up automations into one workspace.",
+    url: "https://app.chatbotistic.com/",
+  },
   robots: { index: true, follow: true },
   description:
     "Chatbotistic — shared team inbox, broadcast campaigns, sales pipelines, chatbot widgets, and visual automations on Meta Cloud API, Twilio, or your own SMS gateway.",

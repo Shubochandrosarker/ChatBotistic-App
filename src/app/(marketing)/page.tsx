@@ -24,6 +24,8 @@ import { HeroVisual } from "@/components/marketing/hero-visual";
 
 export const metadata: Metadata = {
   title: "Every conversation in one place — inbox, broadcasts & automations",
+  description: "Chatbotistic brings your WhatsApp and SMS conversations, team inbox, chatbot widgets, CRM pipelines, broadcasts, and automations into one focused workspace.",
+  alternates: { canonical: "/" },
 };
 
 const features = [
@@ -36,7 +38,7 @@ const features = [
   },
   {
     icon: Megaphone,
-    tone: "bg-[oklch(0.62_0.17_250)]/12 text-[oklch(0.55_0.17_250)] dark:text-[oklch(0.72_0.15_250)]",
+    tone: "bg-accent text-accent-foreground",
     title: "Broadcast campaigns",
     description:
       "Send approved templates to thousands of contacts with per-recipient variables, live delivery tracking, and automatic retries.",
@@ -50,14 +52,14 @@ const features = [
   },
   {
     icon: KanbanSquare,
-    tone: "bg-warning/15 text-warning",
+    tone: "bg-accent text-accent-foreground",
     title: "Sales pipelines",
     description:
       "Drag-and-drop deal stages tied to real conversations, so your pipeline always reflects what customers actually said.",
   },
   {
     icon: Contact,
-    tone: "bg-[oklch(0.65_0.2_15)]/12 text-[oklch(0.6_0.2_15)] dark:text-[oklch(0.72_0.18_15)]",
+    tone: "bg-accent text-accent-foreground",
     title: "Contacts CRM",
     description:
       "Tags, custom fields, consent records, and full message history per contact — imported from CSV or captured automatically.",
@@ -132,6 +134,33 @@ const trustPoints = [
 export default function LandingPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@graph': [
+              {
+                '@type': 'WebSite',
+                '@id': 'https://app.chatbotistic.com/#website',
+                url: 'https://app.chatbotistic.com/',
+                name: 'Chatbotistic',
+                description: 'WhatsApp and SMS CRM workspace with shared inboxes, chatbot widgets, and automations.',
+              },
+              {
+                '@type': 'SoftwareApplication',
+                '@id': 'https://app.chatbotistic.com/#application',
+                name: 'Chatbotistic',
+                url: 'https://app.chatbotistic.com/',
+                applicationCategory: 'BusinessApplication',
+                operatingSystem: 'Web',
+                description: 'A customer communication workspace for WhatsApp, SMS, contacts, pipelines, widgets, broadcasts, and automations.',
+                publisher: { '@type': 'Organization', name: 'Chatbotistic', url: 'https://app.chatbotistic.com/' },
+              },
+            ],
+          }),
+        }}
+      />
       {/* ───────────────────────── Hero ───────────────────────── */}
       <section className="relative overflow-hidden">
         <div className="mk-dot-grid absolute inset-0" aria-hidden="true" />

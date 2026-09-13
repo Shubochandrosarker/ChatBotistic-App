@@ -17,21 +17,18 @@ interface EmbedCodeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   widget: TochatWidget | null;
-  embedBaseUrl: string;
 }
 
 /**
- * Shows the real embed snippet for one widget — the exact
- * `<script async src="{base}/widget/{id}/load.js">` shape both
- * chatbotistic-widget (WordPress) and chatbotistic-connector generate,
- * confirmed against their PHP source rather than guessed.
+ * Shows the branded loader. The app proxies the provider's public widget
+ * JavaScript so customers never need to paste a provider-domain snippet.
  */
-export function EmbedCodeDialog({ open, onOpenChange, widget, embedBaseUrl }: EmbedCodeDialogProps) {
+export function EmbedCodeDialog({ open, onOpenChange, widget }: EmbedCodeDialogProps) {
   const [copied, setCopied] = useState(false);
 
   if (!widget?.id) return null;
 
-  const snippet = `<script async src="${embedBaseUrl}/widget/${widget.id}/load.js"></script>`;
+  const snippet = `<script defer src="https://app.chatbotistic.com/install-widget/bundle.js?key=${encodeURIComponent(widget.id)}"></script>`;
 
   async function handleCopy() {
     try {
@@ -53,7 +50,7 @@ export function EmbedCodeDialog({ open, onOpenChange, widget, embedBaseUrl }: Em
             Embed &quot;{widget.name}&quot;
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Paste this snippet just before{' '}
+            Paste this one-line branded loader just before{' '}
             <code className="font-mono text-[13px]">&lt;/body&gt;</code> on
             any page you want the widget to appear on.
           </DialogDescription>
@@ -84,12 +81,12 @@ export function EmbedCodeDialog({ open, onOpenChange, widget, embedBaseUrl }: Em
             <div>
               <p className="font-medium text-foreground">WordPress</p>
               <p className="mt-0.5">
-                Install the Chatbotistic widget plugin and set this
+                Install the Chatbotistic widget plugin and select this
                 widget&apos;s id (
                 <code className="font-mono text-[12px] text-foreground">
                   {widget.id}
                 </code>
-                ) as its widget key — no manual snippet needed.
+                ) as its widget key. The plugin uses the same branded loader.
               </p>
             </div>
             <div>

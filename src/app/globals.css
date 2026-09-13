@@ -105,10 +105,10 @@
   --input: oklch(0.912 0.012 162);
   --ring: oklch(0.53 0.132 162);
   --chart-1: oklch(0.53 0.132 162);
-  --chart-2: oklch(0.52 0.13 232);
-  --chart-3: oklch(0.56 0.15 300);
-  --chart-4: oklch(0.56 0.14 55);
-  --chart-5: oklch(0.56 0.18 20);
+  --chart-2: oklch(0.48 0.12 174);
+  --chart-3: oklch(0.62 0.13 150);
+  --chart-4: oklch(0.57 0.11 138);
+  --chart-5: oklch(0.43 0.1 184);
   --radius: 0.75rem;
   --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.205 0.018 168);
@@ -152,10 +152,10 @@
   --input: oklch(0.288 0.022 168);
   --ring: oklch(0.72 0.155 162);
   --chart-1: oklch(0.72 0.155 162);
-  --chart-2: oklch(0.7 0.13 232);
-  --chart-3: oklch(0.72 0.14 300);
-  --chart-4: oklch(0.77 0.14 60);
-  --chart-5: oklch(0.7 0.17 20);
+  --chart-2: oklch(0.66 0.13 174);
+  --chart-3: oklch(0.78 0.13 150);
+  --chart-4: oklch(0.72 0.11 138);
+  --chart-5: oklch(0.58 0.1 184);
   --sidebar: oklch(0.168 0.015 168);
   --sidebar-foreground: oklch(0.965 0.006 162);
   --sidebar-primary: oklch(0.72 0.155 162);
@@ -164,6 +164,13 @@
   --sidebar-accent-foreground: oklch(0.9 0.07 162);
   --sidebar-border: oklch(0.288 0.022 168);
   --sidebar-ring: oklch(0.72 0.155 162);
+}
+
+/* A restrained gloss treatment shared by dashboard and marketing surfaces.
+   It uses only the green brand family and keeps text contrast unchanged. */
+.surface-gloss {
+  background: linear-gradient(145deg, color-mix(in oklab, var(--card) 96%, var(--accent)), var(--card));
+  box-shadow: var(--elevation-1), inset 0 1px 0 color-mix(in oklab, white 72%, transparent);
 }
 
 @layer base {

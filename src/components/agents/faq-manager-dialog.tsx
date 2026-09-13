@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Trash2, X, ArrowLeft } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, X, ArrowLeft, FileSearch, Globe2, Link2, FileText, Sparkles } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -50,6 +50,12 @@ export function FaqManagerDialog({ open, onOpenChange, agent }: FaqManagerDialog
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [rows, setRows] = useState<FaqRow[]>([emptyRow()]);
+  const [sourceMode, setSourceMode] = useState<'manual' | 'sitemap' | 'urls' | 'text'>('manual');
+  const [sitemapUrl, setSitemapUrl] = useState('');
+  const [urlsText, setUrlsText] = useState('');
+  const [customText, setCustomText] = useState('');
+  const [scanning, setScanning] = useState(false);
+  const [scanMeta, setScanMeta] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!agent?.id) return;
@@ -82,6 +88,11 @@ export function FaqManagerDialog({ open, onOpenChange, agent }: FaqManagerDialog
     setEditingId(null);
     setTitle('');
     setRows([emptyRow()]);
+    setSourceMode('manual');
+    setSitemapUrl('');
+    setUrlsText('');
+    setCustomText('');
+    setScanMeta(null);
     setView('edit');
   }
 
@@ -89,7 +100,41 @@ export function FaqManagerDialog({ open, onOpenChange, agent }: FaqManagerDialog
     setEditingId(group.id ?? null);
     setTitle(group.title ?? '');
     setRows(group.faqs?.length ? group.faqs.map((f) => ({ ...f })) : [emptyRow()]);
+    setSourceMode('manual');
+    setScanMeta(null);
     setView('edit');
+  }
+
+  async function handleScan() {
+    if (!agent?.id || sourceMode === 'manual') return;
+    setScanning(true);
+    setScanMeta(null);
+    try {
+      const res = await fetch('/api/tochat/faq-groups/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operatorId: agent.id,
+          mode: sourceMode,
+          sitemapUrl: sourceMode === 'sitemap' ? sitemapUrl : undefined,
+          urls: sourceMode === 'urls' ? urlsText.split(/[\n,]/).map((url) => url.trim()).filter(Boolean) : undefined,
+          text: sourceMode === 'text' ? customText : undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error ?? 'Could not generate FAQs');
+        return;
+      }
+      setRows(data.faqs?.length ? data.faqs : [emptyRow()]);
+      setTitle((current) => current.trim() || data.titleSuggestion || 'Website FAQs');
+      setScanMeta(`${data.faqs?.length ?? 0} FAQs generated${data.sources?.length ? ` from ${data.sources.length} source${data.sources.length === 1 ? '' : 's'}` : ''}. Review them before saving.`);
+      toast.success('FAQs generated');
+    } catch {
+      toast.error('Could not reach the FAQ scanner');
+    } finally {
+      setScanning(false);
+    }
   }
 
   function updateRow(index: number, patch: Partial<FaqRow>) {
@@ -189,7 +234,7 @@ export function FaqManagerDialog({ open, onOpenChange, agent }: FaqManagerDialog
           <DialogDescription className="text-muted-foreground">
             {view === 'list'
               ? 'Frequently asked questions this agent answers automatically before handing off to WhatsApp.'
-              : 'Group related questions under one title.'}
+              : 'Create them manually or generate editable answers from trusted website content.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -272,6 +317,60 @@ export function FaqManagerDialog({ open, onOpenChange, agent }: FaqManagerDialog
                 placeholder="Frequently asked questions"
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
               />
+            </div>
+
+            <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+              <div className="flex items-start gap-2">
+                <FileSearch className="mt-0.5 size-4 text-primary" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">FAQ source</p>
+                  <p className="text-xs text-muted-foreground">Generate a draft from your public content, then edit and save it to this agent.</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-1 rounded-lg bg-background/70 p-1 sm:grid-cols-4">
+                {([
+                  ['manual', 'Manual', FileText],
+                  ['sitemap', 'Sitemap', Globe2],
+                  ['urls', 'Website URLs', Link2],
+                  ['text', 'Custom text', FileText],
+                ] as const).map(([mode, label, Icon]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => { setSourceMode(mode); setScanMeta(null); }}
+                    className={`flex items-center justify-center gap-1.5 rounded-md px-2 py-2 text-xs font-medium transition-colors ${sourceMode === mode ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                  >
+                    <Icon className="size-3.5" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {sourceMode === 'sitemap' && (
+                <div className="space-y-2">
+                  <Label htmlFor="faq-sitemap" className="text-xs text-muted-foreground">Sitemap URL</Label>
+                  <Input id="faq-sitemap" value={sitemapUrl} onChange={(e) => setSitemapUrl(e.target.value)} placeholder="https://example.com/sitemap.xml" className="bg-background border-border text-foreground placeholder:text-muted-foreground" />
+                </div>
+              )}
+              {sourceMode === 'urls' && (
+                <div className="space-y-2">
+                  <Label htmlFor="faq-urls" className="text-xs text-muted-foreground">Website URLs (one per line)</Label>
+                  <Textarea id="faq-urls" value={urlsText} onChange={(e) => setUrlsText(e.target.value)} placeholder={'https://example.com/pricing\nhttps://example.com/support'} rows={3} className="bg-background border-border text-foreground placeholder:text-muted-foreground" />
+                </div>
+              )}
+              {sourceMode === 'text' && (
+                <div className="space-y-2">
+                  <Label htmlFor="faq-custom-text" className="text-xs text-muted-foreground">Custom business information</Label>
+                  <Textarea id="faq-custom-text" value={customText} onChange={(e) => setCustomText(e.target.value)} placeholder="Paste approved product, support, pricing, or policy information here." rows={5} className="bg-background border-border text-foreground placeholder:text-muted-foreground" />
+                </div>
+              )}
+              {sourceMode !== 'manual' && (
+                <Button type="button" size="sm" onClick={handleScan} disabled={scanning} className="bg-primary text-primary-foreground hover:bg-primary">
+                  {scanning ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+                  {scanning ? 'Scanning…' : 'Scan & generate FAQs'}
+                </Button>
+              )}
+              {scanMeta && <p className="text-xs text-primary">{scanMeta}</p>}
             </div>
 
             <div className="max-h-[45vh] space-y-3 overflow-y-auto pr-1">
