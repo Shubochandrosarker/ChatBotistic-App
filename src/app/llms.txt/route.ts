@@ -4,14 +4,16 @@ const content = `# Chatbotistic
 
 ## Canonical product links
 
-- Dashboard: https://app.chatbotistic.com/
-- Pricing: https://app.chatbotistic.com/pricing
-- API documentation: https://app.chatbotistic.com/docs
-- Full product context: https://app.chatbotistic.com/llms-full.txt
+- Public website: https://www.chatbotistic.com/
+- Dashboard: https://app.chatbotistic.com/login
+- Public pricing: https://www.chatbotistic.com/pricing/
+- Public documentation: https://www.chatbotistic.com/docs/
+- Full product context: https://www.chatbotistic.com/llms-full.txt
 
 ## Architecture
 
 - Customer-facing dashboard: https://app.chatbotistic.com
+- Public marketing site: https://www.chatbotistic.com
 - Provider backend API: https://services.tochat.be
 - Widget installation façade: https://app.chatbotistic.com/install-widget/bundle.js?key={WIDGET_KEY}
 

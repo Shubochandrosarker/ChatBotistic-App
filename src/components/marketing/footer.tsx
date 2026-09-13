@@ -7,19 +7,19 @@ const columns: { heading: string; links: { href: string; label: string }[] }[] =
     {
       heading: "Product",
       links: [
-        { href: "/#features", label: "Features" },
-        { href: "/#how-it-works", label: "How it works" },
-        { href: "/#integrations", label: "Integrations" },
+        { href: "https://www.chatbotistic.com/#features", label: "Features" },
+        { href: "https://www.chatbotistic.com/#how-it-works", label: "How it works" },
+        { href: "https://www.chatbotistic.com/#integrations", label: "Integrations" },
         { href: "/signup", label: "Get started" },
       ],
     },
     {
       heading: "Developers",
       links: [
-        { href: "/docs", label: "API documentation" },
-        { href: "/docs#webhooks", label: "Webhooks" },
-        { href: "/docs#sso", label: "SSO" },
-        { href: "/docs#environment", label: "Self-hosting" },
+        { href: "https://www.chatbotistic.com/docs/", label: "API documentation" },
+        { href: "https://www.chatbotistic.com/docs/#webhooks", label: "Webhooks" },
+        { href: "https://www.chatbotistic.com/docs/#sso", label: "SSO" },
+        { href: "https://www.chatbotistic.com/docs/#environment", label: "Self-hosting" },
       ],
     },
     {
@@ -38,7 +38,7 @@ export function MarketingFooter() {
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div>
           <Link
-            href="/"
+            href="https://www.chatbotistic.com/"
             className="flex items-center gap-2.5 font-semibold tracking-tight"
           >
             <BrandTile className="size-8 rounded-xl" />

@@ -9,11 +9,11 @@ import { cn } from "@/lib/utils";
 import { BrandTile } from "@/components/brand/logo";
 
 const links = [
-  { href: "/#features", label: "Features" },
-  { href: "/#how-it-works", label: "How it works" },
-  { href: "/#integrations", label: "Integrations" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/docs", label: "Docs" },
+  { href: "https://www.chatbotistic.com/#features", label: "Features" },
+  { href: "https://www.chatbotistic.com/#how-it-works", label: "How it works" },
+  { href: "https://www.chatbotistic.com/#integrations", label: "Integrations" },
+  { href: "https://www.chatbotistic.com/pricing/", label: "Pricing" },
+  { href: "https://www.chatbotistic.com/docs/", label: "Docs" },
 ];
 
 export function MarketingNav() {
@@ -38,7 +38,7 @@ export function MarketingNav() {
     >
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <Link
-          href="/"
+          href="https://www.chatbotistic.com/"
           className="flex items-center gap-2.5 font-semibold tracking-tight"
           onClick={() => setOpen(false)}
         >

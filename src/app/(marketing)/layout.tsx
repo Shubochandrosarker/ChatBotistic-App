@@ -3,11 +3,12 @@ import { MarketingNav } from "@/components/marketing/nav";
 import { MarketingFooter } from "@/components/marketing/footer";
 import "./marketing.css";
 
-// The app shell is noindex (see the root layout); the public marketing
-// and docs pages are the one part of the product that should be crawled.
+// The public product story lives on www.chatbotistic.com. Keep the app host
+// operational and noindex so search engines do not split signals between the
+// marketing site and the authenticated product.
 export const metadata: Metadata = {
   metadataBase: new URL("https://app.chatbotistic.com"),
-  alternates: { canonical: "/" },
+  alternates: { canonical: "https://www.chatbotistic.com/" },
   openGraph: {
     type: "website",
     siteName: "Chatbotistic",
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
     description: "Bring your customer conversations, team inbox, chatbot widgets, and follow-up automations into one workspace.",
     url: "https://app.chatbotistic.com/",
   },
-  robots: { index: true, follow: true },
+  robots: { index: false, follow: true },
   description:
     "Chatbotistic — shared team inbox, broadcast campaigns, sales pipelines, chatbot widgets, and visual automations on Meta Cloud API, Twilio, or your own SMS gateway.",
 };

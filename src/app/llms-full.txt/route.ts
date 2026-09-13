@@ -22,9 +22,10 @@ FAQ groups can be written manually or drafted from a public sitemap, selected we
 
 ## Public documentation
 
-- Dashboard: https://app.chatbotistic.com/
-- Pricing: https://app.chatbotistic.com/pricing
-- API documentation: https://app.chatbotistic.com/docs
+- Public website: https://www.chatbotistic.com/
+- Dashboard: https://app.chatbotistic.com/login
+- Pricing: https://www.chatbotistic.com/pricing/
+- API documentation: https://www.chatbotistic.com/docs/
 - Provider API documentation: https://services.tochat.be/api/docs
 
 ## Editorial and trust guidance
