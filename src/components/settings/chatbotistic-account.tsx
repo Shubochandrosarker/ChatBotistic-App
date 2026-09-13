@@ -38,7 +38,6 @@ export function ChatbotisticAccount() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [apiBase, setApiBase] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
@@ -71,7 +70,6 @@ export function ChatbotisticAccount() {
         body: JSON.stringify({
           email,
           password,
-          apiBase: apiBase.trim() || null,
         }),
       });
       const data = await res.json();
@@ -175,7 +173,7 @@ export function ChatbotisticAccount() {
                 </div>
                 <div className="flex justify-between gap-4">
                   <span className="text-muted-foreground">API origin</span>
-                  <span className="font-medium">{status?.api_base ?? 'https://app.chatbotistic.com'}</span>
+                  <span className="font-medium">{status?.api_base ?? 'https://services.tochat.be'}</span>
                 </div>
                 <div className="flex justify-between gap-4">
                   <span className="text-muted-foreground">Connected</span>
@@ -232,16 +230,9 @@ export function ChatbotisticAccount() {
                     onChange={(e) => setPassword(e.target.value)}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cbt-base">API origin (optional)</Label>
-                  <Input
-                    id="cbt-base"
-                    type="url"
-                    placeholder="https://app.chatbotistic.com"
-                    value={apiBase}
-                    onChange={(e) => setApiBase(e.target.value)}
-                  />
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  Your account connects securely to the Chatbotistic backend at services.tochat.be. The API origin is fixed to the approved backend and cannot be changed from this form.
+                </p>
                 <Button type="submit" disabled={connecting}>
                   {connecting ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}
                   Verify &amp; connect

@@ -42,7 +42,7 @@ interface WidgetsResponse {
 export default function WidgetsPage() {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [widgets, setWidgets] = useState<TochatWidget[]>([]);
-  const [embedBaseUrl, setEmbedBaseUrl] = useState('https://app.chatbotistic.com');
+  const [embedBaseUrl, setEmbedBaseUrl] = useState('https://services.tochat.be');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

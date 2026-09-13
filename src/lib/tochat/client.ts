@@ -25,10 +25,10 @@
 // Env (master/shared fallback only):
 //   TOCHAT_API_EMAIL     — the shared white-label master account email
 //   TOCHAT_API_PASSWORD  — its password
-//   TOCHAT_API_BASE      — optional; defaults to https://app.chatbotistic.com
+//   TOCHAT_API_BASE      — optional; defaults to https://services.tochat.be
 // ------------------------------------------------------------
 
-const DEFAULT_BASE = 'https://app.chatbotistic.com'
+const DEFAULT_BASE = 'https://services.tochat.be'
 const TOKEN_TTL_MS = 50 * 60 * 1000 // ~50 minutes, mirrors class-api.php's TOKEN_TTL.
 
 export class TochatApiError extends Error {
@@ -63,7 +63,13 @@ export interface TochatScope {
 }
 
 export function normalizeTochatBase(raw: string | null | undefined): string {
-  return (raw || DEFAULT_BASE).replace(/\/+$/, '')
+  const value = (raw || DEFAULT_BASE).replace(/\/+$/, '')
+  // app.chatbotistic.com is now the dashboard origin. Keep old stored
+  // connector/app settings from sending API traffic to that dashboard.
+  if (value === 'https://app.chatbotistic.com' || value === 'https://chatbot.wpistic.cloud' || value === 'https://crm.chatbotistic.com') {
+    return DEFAULT_BASE
+  }
+  return value
 }
 
 /**

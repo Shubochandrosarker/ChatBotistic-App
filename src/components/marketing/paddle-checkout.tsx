@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 /**
- * Paddle overlay checkout, env-driven so one build serves sandbox and
+ * Paddle v2 overlay checkout, env-driven so one build serves sandbox and
  * live (the WPistic platform's proven pattern):
  *
  *   NEXT_PUBLIC_PADDLE_ENV         sandbox | live   (default: sandbox)
@@ -32,7 +32,8 @@ interface PaddleCheckoutButtonProps {
 declare global {
   interface Window {
     Paddle?: {
-      initialize: (opts: Record<string, unknown>) => void;
+      Initialize: (opts: Record<string, unknown>) => void;
+      Environment: { set: (environment: 'sandbox') => void };
       Checkout: {
         open: (opts: Record<string, unknown>) => void;
       };
@@ -40,24 +41,43 @@ declare global {
   }
 }
 
+let paddleScriptPromise: Promise<void> | null = null;
+let initializedToken: string | null = null;
+
+function initializePaddle(clientToken: string, environment: 'sandbox' | 'live') {
+  if (!window.Paddle || initializedToken === clientToken) return;
+  if (environment === 'sandbox') window.Paddle.Environment.set('sandbox');
+  window.Paddle.Initialize({ token: clientToken });
+  initializedToken = clientToken;
+}
+
 export function usePaddleReady(clientToken: string | null): boolean {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (!clientToken) return;
+    const environment = process.env.NEXT_PUBLIC_PADDLE_ENV === 'live' ? 'live' : 'sandbox';
     if (window.Paddle) {
-      window.Paddle.initialize({ token: clientToken, eventCallback: () => {} });
+      initializePaddle(clientToken, environment);
       setReady(true);
       return;
     }
-    const script = document.createElement('script');
-    script.src = 'https://cdn.paddle.com/paddle/v1/paddle.js';
-    script.async = true;
-    script.onload = () => {
-      window.Paddle?.initialize({ token: clientToken, eventCallback: () => {} });
-      setReady(true);
-    };
-    document.head.appendChild(script);
+    if (!paddleScriptPromise) {
+      paddleScriptPromise = new Promise<void>((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Paddle.js failed to load'));
+        document.head.appendChild(script);
+      });
+    }
+    paddleScriptPromise
+      .then(() => {
+        initializePaddle(clientToken, environment);
+        setReady(true);
+      })
+      .catch(() => setReady(false));
   }, [clientToken]);
 
   return ready;

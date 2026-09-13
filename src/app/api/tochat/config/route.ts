@@ -24,23 +24,15 @@ import { parseJsonBody } from '@/lib/api/parse-json-body'
  */
 
 /**
- * True only for IPv4 literals outside loopback / private / link-local /
- * reserved ranges. IPv6 literals are refused (the white-label API is a
- * public DNS name; a literal IPv6 origin has no legitimate use here).
+ * The config endpoint sends server-side credentials to the selected origin,
+ * so only explicitly approved Tochat hosts may be configured.
  */
-function isPublicIpv4(host: string): boolean {
-  const parts = host.split('.')
-  if (parts.length !== 4) return false
-  const octets = parts.map((p) => Number(p))
-  if (octets.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return false
-  const [a, b] = octets as [number, number, number, number]
-  if (a === 127 || a === 10 || a === 0) return false
-  if (a === 172 && b >= 16 && b <= 31) return false
-  if (a === 192 && b === 168) return false
-  if (a === 169 && b === 254) return false
-  if (a === 127) return false
-  if (a >= 224) return false // multicast + reserved
-  return true
+function approvedTochatHosts(): Set<string> {
+  const configured = (process.env.TOCHAT_API_ALLOWED_HOSTS || '')
+    .split(',')
+    .map((host) => host.trim().toLowerCase())
+    .filter(Boolean)
+  return new Set(configured.length ? configured : ['services.tochat.be'])
 }
 
 export async function GET() {
@@ -80,18 +72,12 @@ export async function POST(request: Request) {
         if (parsed.protocol !== 'https:') {
           return NextResponse.json({ error: '`apiBase` must use https' }, { status: 400 })
         }
-        // SSRF guard: the origin is fetched server-side with credentials,
-        // so loopback / private / link-local hosts are refused outright.
         const host = parsed.hostname.toLowerCase()
-        const isIp = /^[0-9.]+$/.test(host) || host.includes(':')
-        if (
-          host === 'localhost' ||
-          host.endsWith('.localhost') ||
-          host.endsWith('.internal') ||
-          host === 'metadata.google.internal' ||
-          (isIp && !isPublicIpv4(host))
-        ) {
-          return NextResponse.json({ error: '`apiBase` must be a public host' }, { status: 400 })
+        // Credentials are sent server-to-server. Do not allow an arbitrary
+        // public origin here: that would turn this form into a credential
+        // exfiltration endpoint. Staging can opt into an explicit host list.
+        if (!approvedTochatHosts().has(host)) {
+          return NextResponse.json({ error: '`apiBase` must be an approved Tochat host' }, { status: 400 })
         }
       } catch {
         return NextResponse.json({ error: '`apiBase` is not a valid URL' }, { status: 400 })

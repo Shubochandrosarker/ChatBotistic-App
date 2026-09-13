@@ -239,7 +239,7 @@ export default function DocsPage() {
                   name: "Base URL",
                   type: "url",
                   description:
-                    "Your deployment origin, e.g. https://chatbot.wpistic.cloud — every path below is relative to it.",
+                    "Your deployment origin, e.g. https://app.chatbotistic.com — every path below is relative to it.",
                 },
                 {
                   name: "Content-Type",
@@ -258,7 +258,7 @@ export default function DocsPage() {
             <div className="mt-4">
               <CodeBlock
                 label="Quick check"
-                code={`curl -s https://chatbot.wpistic.cloud/api/whatsapp/config \\
+                code={`curl -s https://app.chatbotistic.com/api/whatsapp/config \\
   -H 'Cookie: <your session cookie>'
 
 # → { "configured": true, "provider": "meta", ... }`}
@@ -444,7 +444,7 @@ export default function DocsPage() {
               />
               <CodeBlock
                 label="cURL"
-                code={`curl -X POST https://chatbot.wpistic.cloud/api/whatsapp/send \\
+                code={`curl -X POST https://app.chatbotistic.com/api/whatsapp/send \\
   -H 'Content-Type: application/json' \\
   -H 'Cookie: <session>' \\
   -d '{
@@ -473,7 +473,7 @@ export default function DocsPage() {
               />
               <CodeBlock
                 label="cURL"
-                code={`curl -X POST https://chatbot.wpistic.cloud/api/whatsapp/broadcast \\
+                code={`curl -X POST https://app.chatbotistic.com/api/whatsapp/broadcast \\
   -H 'Content-Type: application/json' \\
   -H 'Cookie: <session>' \\
   -d '{
@@ -748,7 +748,7 @@ export default function DocsPage() {
               </p>
               <CodeBlock
                 label="Cron"
-                code={`* * * * * curl -s "https://chatbot.wpistic.cloud/api/automations/cron?secret=$AUTOMATION_CRON_SECRET"`}
+                code={`* * * * * curl -s "https://app.chatbotistic.com/api/automations/cron?secret=$AUTOMATION_CRON_SECRET"`}
               />
             </Endpoint>
           </Section>
@@ -925,7 +925,7 @@ export default function DocsPage() {
                 { name: "CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN", type: "string", description: "Enable Workers-AI embeddings + drafts." },
                 { name: "CHATBOTISTIC_API_URL / CHATBOTISTIC_API_KEY", type: "string", description: "Enable the leads integration." },
                 { name: "TOCHAT_API_EMAIL / TOCHAT_API_PASSWORD", type: "string", description: "Master Tochat.be account — enables Widget Studio (widgets/agents/bookings/campaigns)." },
-                { name: "TOCHAT_API_BASE", type: "string", description: "Override the white-label API origin (default https://app.chatbotistic.com)." },
+                { name: "TOCHAT_API_BASE", type: "string", description: "Override the white-label API origin (default https://services.tochat.be)." },
               ]}
             />
           </Section>

@@ -13,7 +13,7 @@
 //   CHATBOTISTIC_API_URL  — optional; defaults to the hosted API
 // ------------------------------------------------------------
 
-const DEFAULT_BASE = 'https://app.chatbotistic.com'
+const DEFAULT_BASE = 'https://services.tochat.be'
 
 /** A single lead, normalised from whatever field names the API returns. */
 export interface ChatbotisticLead {

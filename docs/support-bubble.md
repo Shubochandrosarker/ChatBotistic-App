@@ -44,7 +44,7 @@ const list = [
 	"http://localhost:8787",
 	"http://127.0.0.1:8787",
 	"https://chat.wpistic.cloud",
-	"https://chatbot.wpistic.cloud", // ← the dashboard
+	"https://app.chatbotistic.com", // ← the dashboard
 ];
 ```
 

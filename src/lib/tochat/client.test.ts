@@ -201,7 +201,7 @@ describe('tochat client', () => {
       verifyTochatLogin('x@example.com', 'wrong', 'https://app.chatbotistic.com'),
     ).rejects.toMatchObject({ name: 'TochatApiError', status: 401 })
     expect(fetchMock.mock.calls[0][0]).toBe(
-      'https://app.chatbotistic.com/api/authentication_token',
+      'https://services.tochat.be/api/authentication_token',
     )
   })
 

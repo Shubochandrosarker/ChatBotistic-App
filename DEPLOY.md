@@ -44,7 +44,7 @@ thousands-of-files upload that stalls in the hPanel File Manager.
 | ------ | ----- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → `anon` `public` key |
-| `NEXT_PUBLIC_SITE_URL` | optional — defaults to `https://chatbot.wpistic.cloud` |
+| `NEXT_PUBLIC_SITE_URL` | optional — defaults to `https://app.chatbotistic.com` |
 
 **Each deploy.** GitHub → **Actions → Build deployment artifact → Run
 workflow**. When it finishes, open the run and download the
@@ -71,7 +71,7 @@ them:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co \
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key \
-NEXT_PUBLIC_SITE_URL=https://chatbot.wpistic.cloud \
+NEXT_PUBLIC_SITE_URL=https://app.chatbotistic.com \
 npm run build
 ```
 
@@ -103,7 +103,7 @@ Then in hPanel: **Websites → your domain → Advanced → Node.js**
 | ----------------------- | -------------------------------------------------- |
 | Node.js version         | 20 or 22 (the app requires `>=20`)                 |
 | Application root         | a fresh, empty folder, e.g. `crm`                  |
-| Application URL          | `chatbot.wpistic.cloud`                            |
+| Application URL          | `app.chatbotistic.com`                             |
 | Application startup file | `server.js`                                        |
 
 If a previous failed attempt left a half-created app, delete it and
@@ -158,10 +158,10 @@ means `.next/static/` was not uploaded).
 Then wire up the externally-reachable URLs:
 
 - **Meta webhook** — point the Meta app's WhatsApp webhook at
-  `https://chatbot.wpistic.cloud/api/whatsapp/webhook`.
+  `https://app.chatbotistic.com/api/whatsapp/webhook`.
 - **Automation cron** — if you use automation Wait steps, add a hPanel
   **Cron Job** that periodically calls
-  `https://chatbot.wpistic.cloud/api/automations/cron` with the
+  `https://app.chatbotistic.com/api/automations/cron` with the
   `AUTOMATION_CRON_SECRET`. See `docs/automations-and-cron.md`.
 
 ## Redeploying

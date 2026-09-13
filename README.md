@@ -37,7 +37,7 @@ Chatbotistic is one product in the WordPressistic family. This repo is
 the **app** — the authenticated dashboard operators log into. It stays
 a separate codebase from the sibling repos:
 
-- **`ChatBotistic-Complete-System-Management`** — the
+- **`ChatBotistic-System-Management`** — the
   chatbotistic.com marketing site and the membership/licensing chain.
 - **`chatbotistic-saas-connector`** — the distribution repo for the
   WordPress connector plugin stack.
