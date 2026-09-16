@@ -4,7 +4,6 @@ import { Check, MessageCircle, Sparkles, ArrowRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Reveal } from "@/components/marketing/reveal";
-import { PaddleCheckoutButton } from "@/components/marketing/paddle-checkout";
 
 export const metadata: Metadata = {
   title: "Pricing — from a free widget to a full WhatsApp CRM",
@@ -12,22 +11,11 @@ export const metadata: Metadata = {
     "Chatbotistic plans: Free Forever, Starter, Growth and Agency. Every paid plan includes the widget builder, team inbox, broadcasts, automations and per-customer analytics isolation.",
 };
 
-// Price IDs are deployment env (PRI_*-style vars) and must be read at
-// request time, not frozen into a static build.
-export const dynamic = "force-dynamic";
+const checkoutBase = (process.env.WPISTIC_CHECKOUT_URL ?? "https://pay.wpistic.com").replace(/\/$/, "");
 
-/**
- * Price IDs are read from the SERVER env at request time (PRI_* vars)
- * so rotating a price in Paddle never needs a rebuild. Null priceId →
- * the button renders disabled with a "not configured" tooltip — the
- * plan row still communicates the tier.
- *
- * Tier matrix mirrors the Licenseistic caps seeded by the WordPress
- * memberistic-licenseistic-bridge (single source of truth:
- * chatbotistic-saas-connector/README.md).
- */
 const plans = [
   {
+    slug: "free",
     name: "Free Forever",
     price: "$0",
     cadence: "forever",
@@ -40,11 +28,11 @@ const plans = [
       "Per-widget analytics",
       "WordPress plugin included",
     ],
-    priceEnv: "PADDLE_PRICE_FREE",
     cta: "Start free",
     highlight: false,
   },
   {
+    slug: "starter",
     name: "Starter",
     price: "$19",
     cadence: "/month",
@@ -57,11 +45,11 @@ const plans = [
       "Booking scheduler",
       "Email support",
     ],
-    priceEnv: "PADDLE_PRICE_STARTER",
     cta: "Choose Starter",
     highlight: false,
   },
   {
+    slug: "growth",
     name: "Growth",
     price: "$49",
     cadence: "/month",
@@ -75,11 +63,11 @@ const plans = [
       "Visual automations",
       "Sales pipelines",
     ],
-    priceEnv: "PADDLE_PRICE_GROWTH",
     cta: "Choose Growth",
     highlight: true,
   },
   {
+    slug: "agency",
     name: "Agency",
     price: "$149",
     cadence: "/month",
@@ -92,7 +80,6 @@ const plans = [
       "Priority support",
       "Everything in Growth",
     ],
-    priceEnv: "PADDLE_PRICE_AGENCY",
     cta: "Choose Agency",
     highlight: false,
   },
@@ -105,17 +92,27 @@ const faqs = [
   },
   {
     q: "What happens after payment?",
-    a: "Paddle confirms the transaction, your license key is issued by our license server, and a welcome email with your key and setup link lands in your inbox — usually within a minute.",
+    a: "Paddle confirms the transaction through WPistic, your plan and license entitlements are provisioned by the central control plane, and your account is updated from the signed webhook — not from a browser redirect.",
   },
   {
     q: "Can I cancel anytime?",
-    a: "Yes. Subscriptions are managed by Paddle; cancel from the link in any billing email and your plan stays active until the end of the paid period.",
+    a: "Yes. Subscriptions are managed by Paddle; cancel from the Paddle customer portal or billing email and your plan remains active until the effective cancellation date.",
   },
   {
     q: "Do I need the WordPress plugin?",
     a: "No — the CRM works standalone. The plugin is how you embed widgets on WordPress sites and track their analytics without leaving wp-admin.",
   },
 ];
+
+function checkoutHref(planSlug: string): string {
+  const params = new URLSearchParams({
+    product: "chatbotistic",
+    plan: planSlug,
+    interval: "month",
+    source: "chatbotistic.com",
+  });
+  return `${checkoutBase}/?${params.toString()}`;
+}
 
 export default function PricingPage() {
   return (
@@ -132,8 +129,8 @@ export default function PricingPage() {
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-pretty text-muted-foreground sm:text-lg">
             Every plan ships the widget builder, lead capture and per-customer
-            analytics isolation. Upgrade when your conversations outgrow the
-            free tier.
+            analytics isolation. Paid checkout is handled centrally on the
+            Paddle-approved WPistic payment domain.
           </p>
         </Reveal>
       </section>
@@ -172,25 +169,15 @@ export default function PricingPage() {
                   ))}
                 </ul>
                 <div className="mt-6 pt-2">
-                  {plan.name === "Free Forever" ? (
-                    <Link
-                      href="/register"
-                      className={cn(
-                        buttonVariants({ variant: plan.highlight ? "default" : "outline" }),
-                        "w-full",
-                      )}
-                    >
-                      {plan.cta}
-                    </Link>
-                  ) : (
-                    <PaddleCheckoutButton
-                      priceId={process.env[plan.priceEnv] ?? null}
-                      label={plan.cta}
-                      planName={plan.name}
-                      variant={plan.highlight ? "default" : "outline"}
-                      className="w-full"
-                    />
-                  )}
+                  <Link
+                    href={plan.slug === "free" ? "/register" : checkoutHref(plan.slug)}
+                    className={cn(
+                      buttonVariants({ variant: plan.highlight ? "default" : "outline" }),
+                      "w-full",
+                    )}
+                  >
+                    {plan.cta}
+                  </Link>
                 </div>
               </div>
             ))}
@@ -231,9 +218,9 @@ export default function PricingPage() {
               <div className="flex items-start gap-3">
                 <ArrowRight className="mt-0.5 size-5 shrink-0 text-primary" />
                 <div>
-                  <strong className="text-foreground">Instant licensing</strong> — your
-                  key arrives by email minutes after checkout and activates the
-                  WordPress plugin.
+                  <strong className="text-foreground">Central billing</strong> — paid
+                  purchases run through WPistic and access is granted only after a
+                  verified Paddle webhook.
                 </div>
               </div>
             </div>
