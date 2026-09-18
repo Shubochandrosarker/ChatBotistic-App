@@ -425,7 +425,6 @@ BEGIN
   END IF;
 END $$;
 
-
 -- ============================================================
 -- 002_pipelines_enhancements.sql
 -- ============================================================
@@ -463,7 +462,6 @@ END $$;
 
 ALTER TABLE deals
   ADD CONSTRAINT deals_status_check CHECK (status IN ('open', 'won', 'lost'));
-
 
 -- ============================================================
 -- 003_broadcast_recipient_wamid.sql
@@ -553,7 +551,6 @@ CREATE TRIGGER broadcast_recipients_aggregate
 AFTER INSERT OR UPDATE OR DELETE ON broadcast_recipients
 FOR EACH ROW EXECUTE FUNCTION public.broadcast_recipient_aggregate_trigger();
 
-
 -- ============================================================
 -- 004_contact_delete_set_null.sql
 -- ============================================================
@@ -622,7 +619,6 @@ ALTER TABLE deals
   ADD CONSTRAINT deals_contact_id_fkey
     FOREIGN KEY (contact_id) REFERENCES contacts(id)
     ON DELETE SET NULL;
-
 
 -- ============================================================
 -- 005_broadcast_counts_incremental.sql
@@ -756,7 +752,6 @@ BEGIN
   WHERE b.id = bid;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
-
 
 -- ============================================================
 -- 006_automations.sql
@@ -902,7 +897,6 @@ ALTER TABLE automation_pending_executions ENABLE ROW LEVEL SECURITY;
 -- No SELECT/INSERT/UPDATE/DELETE policy for authenticated users — all
 -- access is server-side via the service-role key.
 
-
 -- ============================================================
 -- 007_automations_increment_counter.sql
 -- ============================================================
@@ -941,7 +935,6 @@ REVOKE ALL ON FUNCTION increment_automation_execution_count(UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION increment_automation_execution_count(UUID) FROM anon;
 REVOKE ALL ON FUNCTION increment_automation_execution_count(UUID) FROM authenticated;
 GRANT EXECUTE ON FUNCTION increment_automation_execution_count(UUID) TO service_role;
-
 
 -- ============================================================
 -- 008_profile_avatars_storage.sql
@@ -1005,7 +998,6 @@ CREATE POLICY "Users can delete their own avatar"
     bucket_id = 'avatars'
     AND auth.uid()::text = (storage.foldername(name))[1]
   );
-
 
 -- ============================================================
 -- 009_org_tenancy.sql
@@ -1284,7 +1276,6 @@ $$;
 
 ALTER FUNCTION public.handle_new_user() OWNER TO postgres;
 
-
 -- ============================================================
 -- 010_whatsapp_provider.sql
 -- ============================================================
@@ -1323,7 +1314,6 @@ ALTER TABLE whatsapp_config
 -- in the API route and the provider adapters.
 ALTER TABLE whatsapp_config ALTER COLUMN phone_number_id DROP NOT NULL;
 ALTER TABLE whatsapp_config ALTER COLUMN access_token DROP NOT NULL;
-
 
 -- ============================================================
 -- 011_ai_knowledge_base.sql
@@ -1433,7 +1423,6 @@ AS $$
   LIMIT GREATEST(p_match_count, 1);
 $$;
 
-
 -- ============================================================
 -- 012_org_saas_entitlements.sql
 -- ============================================================
@@ -1458,7 +1447,6 @@ COMMENT ON COLUMN organizations.contact_limit IS
   'Monthly active-contact cap from the membership plan. 0 = unlimited.';
 COMMENT ON COLUMN organizations.white_label IS
   'Whether the plan ships the fully white-labelled chat widget.';
-
 
 -- ============================================================
 -- 013_sms_gateway_provider.sql
@@ -1496,7 +1484,6 @@ ALTER TABLE whatsapp_config
 
 ALTER TABLE whatsapp_config
   ADD COLUMN IF NOT EXISTS jasmin_default_sender TEXT;    -- sender ID / number
-
 
 -- ============================================================
 -- 014_sms_compliance.sql
@@ -1585,7 +1572,6 @@ ALTER TABLE whatsapp_config
 ALTER TABLE whatsapp_config
   ADD COLUMN IF NOT EXISTS sms_timezone TEXT NOT NULL DEFAULT 'America/New_York';
 
-
 -- ============================================================
 -- 015_sms_a2p_registration.sql
 -- ============================================================
@@ -1610,7 +1596,6 @@ ALTER TABLE whatsapp_config
   ADD COLUMN IF NOT EXISTS a2p_status TEXT NOT NULL DEFAULT 'unregistered'
     CHECK (a2p_status IN ('unregistered', 'pending', 'registered', 'rejected'));
 
-
 -- ============================================================
 -- 016_sms_broadcast.sql
 -- ============================================================
@@ -1632,7 +1617,6 @@ ALTER TABLE broadcasts
 
 ALTER TABLE broadcasts
   ALTER COLUMN template_name DROP NOT NULL;
-
 
 -- ============================================================
 -- 017_sms_consent_widget.sql
@@ -1658,54 +1642,102 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_whatsapp_config_widget_key
   ON whatsapp_config (sms_widget_key)
   WHERE sms_widget_key IS NOT NULL;
 
-
 -- ============================================================
--- 999_backfill_existing_users.sql
--- ------------------------------------------------------------
--- After applying the schema for the first time, any users who
--- signed up BEFORE the migrations existed will have an
--- auth.users row but no profile / organization / membership.
--- This backfill creates those for every existing auth user.
--- Idempotent — safe to re-run.
+-- 018_contact_phone_norm_and_conversation_uniques.sql
 -- ============================================================
-DO $$
-DECLARE
-  u RECORD;
-  new_org_id UUID;
-BEGIN
-  FOR u IN SELECT id, email, raw_user_meta_data FROM auth.users LOOP
-
-    -- profile
-    INSERT INTO public.profiles (user_id, full_name, email)
-    VALUES (
-      u.id,
-      COALESCE(u.raw_user_meta_data->>'full_name', ''),
-      u.email
-    )
-    ON CONFLICT (user_id) DO NOTHING;
-
-    -- organization (one per user, keyed by legacy sso_subject)
-    INSERT INTO public.organizations (name, sso_subject)
-    VALUES (
-      COALESCE(NULLIF(u.raw_user_meta_data->>'full_name', ''), u.email, 'Organization'),
-      'legacy:' || u.id
-    )
-    ON CONFLICT (sso_subject) DO UPDATE SET name = EXCLUDED.name
-    RETURNING id INTO new_org_id;
-
-    -- membership
-    INSERT INTO public.org_members (org_id, user_id, role, is_primary)
-    VALUES (new_org_id, u.id, 'owner', TRUE)
-    ON CONFLICT (org_id, user_id) DO NOTHING;
-
-  END LOOP;
-END $$;
-
 -- ============================================================
--- 020 — Per-org white-label (tochat) integration config
--- (contents identical to supabase/migrations/020_tochat_org_config.sql)
+-- 018 - Contact phone normalization + conversation dedupe
+--
+-- Goals:
+-- 1) Speed inbound webhook contact matching by indexing normalized phones.
+-- 2) Prevent duplicate conversations for the same (user_id, contact_id)
+--    under concurrent webhook deliveries.
+--
+-- Idempotent and safe to re-run.
 -- ============================================================
 
+ALTER TABLE contacts
+  ADD COLUMN IF NOT EXISTS phone_normalized TEXT;
+
+-- Backfill any existing contacts.
+UPDATE contacts
+SET phone_normalized = regexp_replace(coalesce(phone, ''), '\D', '', 'g')
+WHERE phone_normalized IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_contacts_user_phone_normalized
+  ON contacts(user_id, phone_normalized);
+
+-- Remove duplicates before enforcing uniqueness.
+WITH ranked AS (
+  SELECT
+    id,
+    row_number() OVER (
+      PARTITION BY user_id, contact_id
+      ORDER BY created_at ASC, id ASC
+    ) AS rn
+  FROM conversations
+)
+DELETE FROM conversations c
+USING ranked r
+WHERE c.id = r.id
+  AND r.rn > 1;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_conversations_user_contact
+  ON conversations(user_id, contact_id);
+
+
+-- ============================================================
+-- 019_sms_policy_preflight_and_consent_events.sql
+-- ============================================================
+-- ============================================================
+-- 019 - SMS consent evidence model + policy primitives
+--
+-- Adds:
+-- 1) richer evidence columns on sms_consent
+-- 2) append-only sms_consent_events ledger
+--
+-- Idempotent - safe to run multiple times.
+-- ============================================================
+
+ALTER TABLE sms_consent
+  ADD COLUMN IF NOT EXISTS legal_text_version TEXT;
+
+ALTER TABLE sms_consent
+  ADD COLUMN IF NOT EXISTS opt_in_user_agent TEXT;
+
+ALTER TABLE sms_consent
+  ADD COLUMN IF NOT EXISTS opt_out_source TEXT;
+
+CREATE TABLE IF NOT EXISTS sms_consent_events (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  contact_id UUID NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+  action TEXT NOT NULL CHECK (action IN ('opt_in', 'opt_out', 'help', 'start', 'stop')),
+  source TEXT,
+  legal_text_version TEXT,
+  evidence_ip TEXT,
+  evidence_user_agent TEXT,
+  details JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sms_consent_events_user_created
+  ON sms_consent_events(user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_sms_consent_events_contact
+  ON sms_consent_events(contact_id, created_at DESC);
+
+ALTER TABLE sms_consent_events ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own sms consent events" ON sms_consent_events;
+CREATE POLICY "Users can view own sms consent events" ON sms_consent_events FOR SELECT
+  USING (auth.uid() = user_id);
+
+
+-- ============================================================
+-- 020_tochat_org_config.sql
+-- ============================================================
+-- 020_tochat_org_config.sql
 -- Per-org white-label (tochat.be) integration state.
 --
 -- Two isolation modes, resolved in src/lib/tochat/org-config.ts:
@@ -1764,3 +1796,132 @@ on conflict (org_id) do nothing;
 update public.tochat_org_config
 set user_client = 'org-' || org_id::text
 where user_client = '';
+
+-- ============================================================
+-- 021_org_autoprovision.sql
+-- ============================================================
+-- ============================================================
+-- 021 — Auto-provision an organization for every signup
+--
+-- Problem: users who sign up directly at /signup get a profile but
+-- NO organization, so every org-scoped API call returns
+-- "No organization for this account" (404) and the dashboard is
+-- unusable until an SSO login happens to create one.
+--
+-- Fix: extend the existing on_auth_user_created trigger to also
+-- create a personal org + owner membership when the new user has
+-- none. Idempotent — safe to run multiple times.
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  new_org_id uuid;
+BEGIN
+  INSERT INTO public.profiles (user_id, full_name, email)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
+    NEW.email
+  );
+
+  -- Personal workspace: every confirmed signup gets an org they own,
+  -- so the dashboard works immediately after email confirmation.
+  IF NOT EXISTS (SELECT 1 FROM public.org_members WHERE user_id = NEW.id) THEN
+    INSERT INTO public.organizations (name, slug, plan)
+    VALUES (
+      COALESCE(
+        NULLIF(NEW.raw_user_meta_data->>'full_name', ''),
+        split_part(NEW.email, '@', 1) || '''s workspace'
+      ),
+      NULL,
+      'free'
+    )
+    RETURNING id INTO new_org_id;
+
+    INSERT INTO public.org_members (org_id, user_id, role, is_primary)
+    VALUES (new_org_id, NEW.id, 'owner', TRUE);
+  END IF;
+
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  RAISE WARNING 'Failed to provision signup for user %: %', NEW.id, SQLERRM;
+  RETURN NEW;
+END;
+$$;
+
+ALTER FUNCTION public.handle_new_user() OWNER TO postgres;
+
+-- Re-assert the trigger binding (no-op if it already exists and is
+-- bound to this function name — CREATE TRIGGER lacks IF NOT EXISTS,
+-- so drop-and-recreate is the idempotent pattern used in 001).
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ============================================================
+-- 022_org_licenses.sql
+-- ============================================================
+-- ============================================================
+-- 022 — Per-org license records (WPistic license server link)
+--
+-- The org's SaaS entitlements (plan, widget_limit, …) stay on
+-- `organizations` — that is what the app enforces. This table keeps
+-- the *activation* side: which license key the org activated in this
+-- CRM, what the WPistic license server last said about it, and when
+-- we last checked. One row per org (the CRM activates at most one
+-- Chatbotistic license per workspace).
+--
+-- Idempotent — safe to run multiple times.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.org_licenses (
+  org_id uuid PRIMARY KEY
+    REFERENCES public.organizations (id) ON DELETE CASCADE,
+  license_key_mask TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'inactive'
+    CHECK (status IN ('active', 'inactive', 'expired', 'suspended', 'grace_period', 'activation_suspended')),
+  product TEXT,
+  plan TEXT,
+  expires_at TIMESTAMPTZ,
+  activation_domain TEXT,
+  entitlements JSONB NOT NULL DEFAULT '{}'::jsonb,
+  last_checked_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON COLUMN public.org_licenses.license_key_mask IS
+  'Masked license key (e.g. WPIST-****-****-3F7A) — the raw key is never stored, only a SHA-256 hash.';
+COMMENT ON COLUMN public.org_licenses.entitlements IS
+  'Snapshot of the entitlement map from the last successful activation/validation response.';
+
+-- Raw-key hash for re-validation without asking the user again.
+ALTER TABLE public.org_licenses
+  ADD COLUMN IF NOT EXISTS license_key_hash TEXT;
+
+-- Encrypted activation token (AES-256-GCM via the app's ENCRYPTION_KEY)
+-- used for server-side re-validate / deactivate. Never returned to the
+-- client — only decrypted inside the licensing API routes.
+ALTER TABLE public.org_licenses
+  ADD COLUMN IF NOT EXISTS activation_token_encrypted TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_org_licenses_status ON public.org_licenses (status);
+
+-- RLS: org members can read their own license row; writes only via
+-- service role (the activation API route runs server-side).
+ALTER TABLE public.org_licenses ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS org_licenses_read ON public.org_licenses;
+CREATE POLICY org_licenses_read ON public.org_licenses
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.org_members m
+      WHERE m.org_id = org_licenses.org_id AND m.user_id = auth.uid()
+    )
+  );

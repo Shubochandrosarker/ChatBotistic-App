@@ -38,6 +38,18 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, router]);
 
+  // Belt-and-braces: make sure this user owns a workspace org. Covers
+  // accounts created before migration 021 and any auth path that skipped
+  // provisioning — without an org every dashboard API call 404s. Silent,
+  // fire-and-forget; a no-op when the org already exists.
+  const [orgEnsured, setOrgEnsured] = useState(false);
+  useEffect(() => {
+    if (!loading && user && !orgEnsured) {
+      setOrgEnsured(true);
+      void fetch("/api/auth/ensure-org", { method: "POST" }).catch(() => {});
+    }
+  }, [user, loading, orgEnsured]);
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {

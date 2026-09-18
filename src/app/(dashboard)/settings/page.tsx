@@ -1,17 +1,18 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Settings, MessageSquare, Tag, User, MessageCircle } from 'lucide-react';
+import { Settings, MessageSquare, Tag, User, MessageCircle, KeyRound } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { WhatsAppConfig } from '@/components/settings/whatsapp-config';
 import { ChatbotisticAccount } from '@/components/settings/chatbotistic-account';
+import { LicenseCard } from '@/components/settings/license-card';
 import { TemplateManager } from '@/components/settings/template-manager';
 import { TagManager } from '@/components/settings/tag-manager';
 import { ProfileForm } from '@/components/settings/profile-form';
 import { PasswordForm } from '@/components/settings/password-form';
 import { SessionsCard } from '@/components/settings/sessions-card';
 
-const TAB_VALUES = ['profile', 'whatsapp', 'chatbotistic', 'templates', 'tags'] as const;
+const TAB_VALUES = ['profile', 'whatsapp', 'chatbotistic', 'license', 'templates', 'tags'] as const;
 type TabValue = (typeof TAB_VALUES)[number];
 
 function isTabValue(v: string | null): v is TabValue {
@@ -69,6 +70,13 @@ export default function SettingsPage() {
             Chatbotistic
           </TabsTrigger>
           <TabsTrigger
+            value="license"
+            className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+          >
+            <KeyRound className="size-4" />
+            License
+          </TabsTrigger>
+          <TabsTrigger
             value="templates"
             className="data-active:bg-muted data-active:text-primary text-muted-foreground"
           >
@@ -96,6 +104,10 @@ export default function SettingsPage() {
 
         <TabsContent value="chatbotistic">
           <ChatbotisticAccount />
+        </TabsContent>
+
+        <TabsContent value="license">
+          <LicenseCard />
         </TabsContent>
 
         <TabsContent value="templates">
