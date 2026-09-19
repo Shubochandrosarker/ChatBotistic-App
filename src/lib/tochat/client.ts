@@ -520,6 +520,16 @@ export const stats = {
     request(scope, `/api/v2/stats?${qs({ itemsPerPage: 100, ...filters })}`, 'GET').then(collection),
   graph: (scope: TochatScope, widgetId: string, from: string, to: string, type: 'day' | 'week' = 'day') =>
     request(scope, `/api/v2/${encodeURIComponent(widgetId)}/stats-graph?${qs({ from, to, type })}`, 'GET'),
+  /** Aggregate counters for one widget — mirrors the WP plugin's /api/v2/widget_stats/{id}. */
+  widgetStats: (scope: TochatScope, widgetId: string) =>
+    request(scope, `/api/v2/widget_stats/${encodeURIComponent(widgetId)}`, 'GET'),
+  /** Referral sources for one widget — mirrors the WP plugin's referer-graph call. */
+  refererGraph: (scope: TochatScope, widgetId: string, from: string, to: string) =>
+    request(
+      scope,
+      `/api/v2/${encodeURIComponent(widgetId)}/referer-graph?${qs({ order: 'desc', from, to })}`,
+      'GET',
+    ),
 }
 
 export function landingLinks(scope: TochatScope, widgetId: string) {

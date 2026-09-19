@@ -108,6 +108,28 @@ const nextConfig: NextConfig = {
    * they apply to every response regardless of which cache rule
    * matched.
    */
+  /**
+   * Legacy tochat.be white-label paths, proxied transparently so the
+   * live 360 Dialog webhook (app.chatbotistic.com/whatsapp-inbox/…),
+   * widget user logins, marketplace and v2 REST API keep working on
+   * this domain. Mirrors the Sep-11 deployment config.
+   */
+  async rewrites() {
+    return {
+      beforeFiles: [
+        { source: '/whatsapp-inbox/:path*', destination: 'https://services.tochat.be/whatsapp-inbox/:path*' },
+        { source: '/widget/:path*', destination: 'https://services.tochat.be/widget/:path*' },
+        { source: '/marketplace/:path*', destination: 'https://services.tochat.be/marketplace/:path*' },
+        { source: '/api/v2/:path*', destination: 'https://services.tochat.be/api/v2/:path*' },
+        { source: '/api/authentication_token', destination: 'https://services.tochat.be/api/authentication_token' },
+        { source: '/api/get-json-lead', destination: 'https://services.tochat.be/api/get-json-lead' },
+        { source: '/api/docs', destination: 'https://services.tochat.be/api/docs' },
+        { source: '/api/docs.jsonld', destination: 'https://services.tochat.be/api/docs.jsonld' },
+        { source: '/docs/:path*', destination: 'https://services.tochat.be/docs/:path*' },
+      ],
+    }
+  },
+
   async headers() {
     return [
       {

@@ -4,6 +4,7 @@ import { Check, MessageCircle, Sparkles, ArrowRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Reveal } from "@/components/marketing/reveal";
+import { CheckoutButton } from "@/components/marketing/checkout-button";
 
 export const metadata: Metadata = {
   title: "Pricing — from a free widget to a full WhatsApp CRM",
@@ -169,15 +170,21 @@ export default function PricingPage() {
                   ))}
                 </ul>
                 <div className="mt-6 pt-2">
-                  <Link
-                    href={plan.slug === "free" ? "/register" : checkoutHref(plan.slug)}
-                    className={cn(
-                      buttonVariants({ variant: plan.highlight ? "default" : "outline" }),
-                      "w-full",
-                    )}
-                  >
-                    {plan.cta}
-                  </Link>
+                  {plan.slug === "free" ? (
+                    <Link
+                      href="/register"
+                      className={cn(
+                        buttonVariants({ variant: plan.highlight ? "default" : "outline" }),
+                        "w-full",
+                      )}
+                    >
+                      {plan.cta}
+                    </Link>
+                  ) : (
+                    <CheckoutButton plan={plan.slug} highlight={plan.highlight}>
+                      {plan.cta}
+                    </CheckoutButton>
+                  )}
                 </div>
               </div>
             ))}
