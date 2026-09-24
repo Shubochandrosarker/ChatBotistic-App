@@ -82,9 +82,9 @@ export async function generateMetadata({
   if (!widget) {
     return { title: 'Chat page not found', robots: { index: false } }
   }
-  const title = `${text(widget.legend, widget.name) || 'Chat with us'} — WhatsApp`
+  const title = `${plain(widget.legend, plain(widget.name)) || 'Chat with us'} — WhatsApp`
   const description =
-    text(widget.widgetMessage, `Chat with ${widget.name || 'us'} live on WhatsApp.`)
+    plain(widget.widgetMessage) || `Chat with ${plain(widget.name) || 'us'} live on WhatsApp.`
   const url = `${siteOrigin()}/whatsapp-business-directory/${uuid}`
   return {
     title,
