@@ -78,11 +78,19 @@ describe('validateBookingConfigPayload', () => {
     expect(err).toMatch(/bookingTimes/)
   })
 
+  it('accepts HTML time inputs that include seconds', () => {
+    expect(
+      validateBookingConfigPayload(
+        validPayload({ bookingTimes: [{ day: 'MON', availableFrom: '09:00:00', availableUntil: '17:00:00' }] }),
+      ),
+    ).toBeNull()
+  })
+
   it('rejects a bookingTimes window that ends before (or when) it starts', () => {
     const err = validateBookingConfigPayload(
       validPayload({ bookingTimes: [{ day: 'MON', availableFrom: '17:00', availableUntil: '09:00' }] }),
     )
-    expect(err).toMatch(/must end after it starts/)
+    expect(err).toMatch(/24-hour time/)
 
     const errEqual = validateBookingConfigPayload(
       validPayload({ bookingTimes: [{ day: 'MON', availableFrom: '09:00', availableUntil: '09:00' }] }),

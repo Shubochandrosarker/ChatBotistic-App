@@ -105,7 +105,7 @@ export function BookingConfigDialog({ open, onOpenChange, agent }: BookingConfig
       if (!res.ok) {
         setError(data.error ?? 'Failed to load booking configs');
       } else if (data.configured === false) {
-        setError('Tochat.be is not connected.');
+        setError('Chatbotistic is not connected.');
       } else {
         setConfigs(data.bookingConfigs ?? []);
       }
@@ -135,7 +135,11 @@ export function BookingConfigDialog({ open, onOpenChange, agent }: BookingConfig
     setSendReminder48(true);
     setCancelBookingInReminder(true);
     setBlockingDays([]);
-    setSchedule(emptySchedule());
+    const starter = emptySchedule();
+    for (const day of ['MON', 'TUE', 'WED', 'THU', 'FRI'] as const) {
+      starter[day] = [{ availableFrom: '09:00', availableUntil: '17:00' }];
+    }
+    setSchedule(starter);
     setView('edit');
   }
 
@@ -223,7 +227,7 @@ export function BookingConfigDialog({ open, onOpenChange, agent }: BookingConfig
         return;
       }
       if (data.configured === false) {
-        toast.error('Tochat.be is not connected.');
+        toast.error('Chatbotistic is not connected.');
         return;
       }
       toast.success(editingId ? 'Booking config updated' : 'Booking config created');
@@ -247,7 +251,7 @@ export function BookingConfigDialog({ open, onOpenChange, agent }: BookingConfig
         return;
       }
       if (body?.configured === false) {
-        toast.error('Tochat.be is not connected.');
+        toast.error('Chatbotistic is not connected.');
         return;
       }
       toast.success('Booking config deleted');
@@ -262,7 +266,7 @@ export function BookingConfigDialog({ open, onOpenChange, agent }: BookingConfig
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border text-foreground sm:max-w-2xl">
+      <DialogContent className="bg-card border-border text-foreground max-h-[min(92dvh,880px)] w-[calc(100%-1rem)] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-foreground">
             {view === 'edit' && (

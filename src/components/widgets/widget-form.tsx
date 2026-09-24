@@ -376,7 +376,7 @@ export function WidgetForm({ open, onOpenChange, widget, onSaved }: WidgetFormPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border text-foreground sm:max-w-4xl">
+      <DialogContent className="bg-card border-border text-foreground sm:max-w-4xl max-h-[min(92dvh,880px)] w-[calc(100%-1rem)] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-foreground">
             {isEdit ? 'Edit Widget' : 'New Widget'}

@@ -203,6 +203,7 @@ export async function fetchTextPinned(
   validated: ValidatedUrl,
   limits: FetchLimits,
   userAgent = 'ChatbotisticFaqScanner/1.0',
+  sameHostRedirects = 2,
 ): Promise<string> {
   const { url } = validated
   const send = url.protocol === 'https:' ? httpsRequest : httpRequest
@@ -236,12 +237,42 @@ export async function fetchTextPinned(
     })
     req.on('error', (err) => finish(err))
     req.on('response', (response) => {
-      if (response.statusCode && response.statusCode >= 300) {
-        const where = response.headers.location
-          ? ` (redirects to ${response.headers.location})`
-          : ''
+      const status = response.statusCode ?? 0
+      if (status >= 300 && status < 400) {
+        const location = response.headers.location
         response.resume()
-        finish(new Error(`Redirects are not allowed when fetching ${url.href}${where}.`))
+        req.destroy()
+        if (!location || sameHostRedirects <= 0) {
+          const where = location ? ` (redirects to ${location})` : ''
+          finish(new Error(`Redirects are not allowed when fetching ${url.href}${where}.`))
+          return
+        }
+        let next: URL
+        try {
+          next = new URL(location, url)
+        } catch {
+          finish(new Error(`Redirects are not allowed when fetching ${url.href} (redirects to ${location}).`))
+          return
+        }
+        if (next.hostname !== url.hostname) {
+          finish(new Error(`Redirects are not allowed when fetching ${url.href} (redirects to ${next.href}).`))
+          return
+        }
+        if (!['http:', 'https:'].includes(next.protocol)) {
+          finish(new Error(`Redirects are not allowed when fetching ${url.href} (redirects to ${next.href}).`))
+          return
+        }
+        fetchTextPinned(
+          { url: next, address: validated.address, family: validated.family },
+          limits,
+          userAgent,
+          sameHostRedirects - 1,
+        ).then((body) => finish(null, body), (err) => finish(err instanceof Error ? err : new Error(String(err))))
+        return
+      }
+      if (status >= 400) {
+        response.resume()
+        finish(new Error(`Fetch of ${url.href} failed with HTTP ${status}.`))
         req.destroy()
         return
       }

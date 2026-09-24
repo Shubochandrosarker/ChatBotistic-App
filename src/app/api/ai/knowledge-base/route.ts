@@ -112,8 +112,12 @@ export async function POST(request: Request) {
     })
     return NextResponse.json(result, { status: 201 })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'ingestion failed'
-    return NextResponse.json({ error: message }, { status: 500 })
+    const raw = err instanceof Error ? err.message : 'ingestion failed'
+    const authFailed = /authentication|unauthorized|forbidden|invalid token|api token/i.test(raw)
+    const message = authFailed
+      ? 'Cloudflare Workers AI rejected the server token. Update CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, then retry.'
+      : raw
+    return NextResponse.json({ error: message }, { status: authFailed ? 502 : 500 })
   }
 }
 
