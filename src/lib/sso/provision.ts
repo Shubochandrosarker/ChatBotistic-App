@@ -29,6 +29,8 @@ export async function provisionFromClaims(
     domain_limit: clampInt(claims.domain_limit, 1),
     // 0 is valid here — it means "unlimited".
     contact_limit: clampInt(claims.contact_limit, 50),
+    seat_limit: clampInt(claims.seat_limit, 1),
+    message_limit: clampInt(claims.message_limit, 100),
     white_label: claims.white_label === true,
     allowed_domains: normalizeDomains(claims.allowed_domains),
     entitlements_synced_at: new Date().toISOString(),
@@ -86,9 +88,12 @@ export async function provisionFromClaims(
 }
 
 function clampInt(value: number | undefined, fallback: number): number {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
-    return fallback
-  }
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback
+  // -1 is the bridge's explicit "unlimited" sentinel (matching
+  // limitReached semantics in entitlements.ts). Any other negative is
+  // malformed data and must fall back, never widen.
+  if (value === -1) return -1
+  if (value < 0) return fallback
   return Math.floor(value)
 }
 

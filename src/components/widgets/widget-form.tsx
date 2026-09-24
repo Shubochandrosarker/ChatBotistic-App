@@ -665,6 +665,15 @@ export function WidgetForm({ open, onOpenChange, widget, onSaved }: WidgetFormPr
               </TabsContent>
 
               <TabsContent value="landing" className="space-y-4">
+                {form.slug.trim() && (
+                  <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                    Public URL:{' '}
+                    <span className="font-mono text-foreground">
+                      https://app.chatbotistic.com/land/{form.slug.trim().replace(/[^a-zA-Z0-9-_]/g, '')}
+                    </span>{' '}
+                    — live once you save. Set the slug under the General tab.
+                  </p>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="wf-landing-primary" className="text-foreground">

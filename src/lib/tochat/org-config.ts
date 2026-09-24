@@ -105,6 +105,31 @@ export async function resolveTochatScope(
   return null
 }
 
+/**
+ * Env-only shared-master scope for PUBLIC, unauthenticated reads —
+ * the published landing pages (/whatsapp-business-directory/{uuid}).
+ *
+ * No org context exists on those routes, so only widgets living in
+ * the deployment's master account can be resolved (widget ids are
+ * globally unique, so an untagged direct get is safe). Widgets owned
+ * by orgs that connected their own isolated account are NOT publicly
+ * resolvable this way — their landing pages stay on their own
+ * white-label host. Null when the master env vars are not set.
+ */
+export function publicReadScope(): TochatScope | null {
+  const email = process.env.TOCHAT_API_EMAIL
+  const password = process.env.TOCHAT_API_PASSWORD
+  if (!email || !password) return null
+  return {
+    orgId: 'public',
+    mode: 'shared',
+    email,
+    password,
+    base: normalizeTochatBase(process.env.TOCHAT_API_BASE),
+    userClient: null,
+  }
+}
+
 /** Status payload for the settings UI (never includes secrets). */
 export async function tochatStatusForOrg(
   supabase: SupabaseClient,

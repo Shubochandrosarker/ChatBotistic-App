@@ -12,17 +12,23 @@ import {
 } from '@/lib/licensing/wpistic-client'
 
 /** Entitlement keys the license server may send that map onto the
- *  organizations columns the app enforces at create-time. */
+ *  organizations columns the app enforces at create/send time. */
 const ENTITLEMENT_TO_COLUMN: Record<string, string> = {
   widget_limit: 'widget_limit',
   agent_limit: 'agent_limit',
   domain_limit: 'domain_limit',
   contact_limit: 'contact_limit',
+  seat_limit: 'seat_limit',
+  message_limit: 'message_limit',
 }
 
 function clampLimit(value: unknown, fallback: number): number {
-  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
-    return Math.floor(value)
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    // -1 is the license server's explicit "unlimited" sentinel
+    // (matching limitReached semantics). Other negatives are malformed
+    // and fall back — never widen.
+    if (value === -1) return -1
+    if (value >= 0) return Math.floor(value)
   }
   return fallback
 }
@@ -128,10 +134,14 @@ export async function persistLicenseResult(
     updated_at: new Date().toISOString(),
   }
   if (result.plan && result.plan !== 'free') orgUpdate.plan = result.plan
+  const ENTITLEMENT_FALLBACKS: Record<string, number> = {
+    contact_limit: 50,
+    seat_limit: 1,
+    message_limit: 100,
+  }
   for (const [key, column] of Object.entries(ENTITLEMENT_TO_COLUMN)) {
     if (key in result.entitlements) {
-      const fallback = column === 'contact_limit' ? 50 : 1
-      orgUpdate[column] = clampLimit(result.entitlements[key], fallback)
+      orgUpdate[column] = clampLimit(result.entitlements[key], ENTITLEMENT_FALLBACKS[key] ?? 1)
     }
   }
 

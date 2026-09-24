@@ -60,7 +60,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { scope, error } = await requireTochatScope()
+    const { scope, error } = await requireTochatScope({ action: true })
     if (error) return error
 
     const { body: payload, error: parseError } = await parseJsonBody(request)

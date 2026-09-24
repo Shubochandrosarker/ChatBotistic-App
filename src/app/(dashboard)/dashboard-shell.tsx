@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
@@ -40,13 +41,29 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
 
   // Belt-and-braces: make sure this user owns a workspace org. Covers
   // accounts created before migration 021 and any auth path that skipped
-  // provisioning — without an org every dashboard API call 404s. Silent,
-  // fire-and-forget; a no-op when the org already exists.
+  // provisioning — without an org every dashboard API call 404s. A no-op
+  // when the org already exists; a provisioning failure is surfaced
+  // (with a reload-to-retry hint) instead of dying silently and leaving
+  // the user staring at empty pages.
   const [orgEnsured, setOrgEnsured] = useState(false);
   useEffect(() => {
     if (!loading && user && !orgEnsured) {
       setOrgEnsured(true);
-      void fetch("/api/auth/ensure-org", { method: "POST" }).catch(() => {});
+      void fetch("/api/auth/ensure-org", { method: "POST" })
+        .then((res) => {
+          if (!res.ok) {
+            toast.error(
+              "Could not prepare your workspace. Reload to retry — if it keeps failing, contact support.",
+              { duration: 8000 },
+            );
+          }
+        })
+        .catch(() => {
+          toast.error(
+            "Could not prepare your workspace. Reload to retry — if it keeps failing, contact support.",
+            { duration: 8000 },
+          );
+        });
     }
   }, [user, loading, orgEnsured]);
 

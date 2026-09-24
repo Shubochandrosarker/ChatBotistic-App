@@ -22,6 +22,7 @@ import {
   logSms,
   type SmsMessageCategory,
 } from '@/lib/sms/compliance'
+import { checkMonthlyMessageCap } from '@/lib/tochat/entitlements'
 
 export async function POST(request: Request) {
   try {
@@ -44,6 +45,17 @@ export async function POST(request: Request) {
     const limit = checkRateLimit(`send:${user.id}`, RATE_LIMITS.send)
     if (!limit.success) {
       return rateLimitResponse(limit)
+    }
+
+    // Plan entitlement: the org's monthly message allowance is
+    // enforced server-side (Free = 100/month), counted from the
+    // messages table so retries and webhook replays don't double-count.
+    const messageCap = await checkMonthlyMessageCap(supabase, user.id, 1)
+    if (!messageCap.allowed) {
+      return NextResponse.json(
+        { error: messageCap.message, limit: messageCap.limit },
+        { status: 403 },
+      )
     }
 
     const body = await request.json()
