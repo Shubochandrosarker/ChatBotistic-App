@@ -44,7 +44,7 @@ export async function PUT(
 ) {
   const { id } = await params
   try {
-    const { scope, error } = await requireTochatScope()
+    const { scope, error } = await requireTochatScope({ action: true })
     if (error) return error
 
     const existing = await widgetOwnedByOrg(scope, id)
@@ -82,7 +82,7 @@ export async function DELETE(
 ) {
   const { id } = await params
   try {
-    const { scope, error } = await requireTochatScope()
+    const { scope, error } = await requireTochatScope({ action: true })
     if (error) return error
 
     const existing = await widgetOwnedByOrg(scope, id)

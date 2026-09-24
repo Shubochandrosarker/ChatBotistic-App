@@ -77,6 +77,45 @@ export function EmbedCodeDialog({ open, onOpenChange, widget }: EmbedCodeDialogP
             </Button>
           </div>
 
+          {widget.slug ? (
+            <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+              <p className="font-medium text-foreground">Public landing page</p>
+              <div className="flex items-center gap-2">
+                <a
+                  href={`/land/${encodeURIComponent(widget.slug)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate font-mono text-[12px] text-primary hover:underline"
+                >
+                  /land/{widget.slug}
+                </a>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="ml-auto h-6 shrink-0 border-border px-2 text-[11px]"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(
+                        `https://app.chatbotistic.com/land/${encodeURIComponent(widget.slug ?? '')}`,
+                      );
+                      toast.success('Landing link copied');
+                    } catch {
+                      toast.error('Could not copy — select and copy manually');
+                    }
+                  }}
+                >
+                  Copy link
+                </Button>
+              </div>
+              <p>
+                The standalone WhatsApp page for this widget, live at its
+                custom slug — share it anywhere you can&apos;t embed the
+                widget itself.
+              </p>
+            </div>
+          ) : null}
+
           <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
             <div>
               <p className="font-medium text-foreground">WordPress</p>

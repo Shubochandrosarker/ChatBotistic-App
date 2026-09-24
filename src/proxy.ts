@@ -23,7 +23,11 @@ export async function proxy(request: NextRequest) {
       pathname === '/manifest.webmanifest' ||
       pathname === '/icon' ||
       pathname === '/apple-icon' ||
-      pathname.startsWith('/install-widget/');
+      pathname.startsWith('/install-widget/') ||
+      // Published chat landing pages (public by design; the page itself
+      // only renders public widget fields and never reads a session).
+      pathname.startsWith('/whatsapp-business-directory/') ||
+      pathname.startsWith('/land/');
 
     // Public marketing, indexing, and widget-loader routes do not need a
     // Supabase session. Keeping them available makes SEO and widget installs

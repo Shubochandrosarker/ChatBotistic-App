@@ -8,7 +8,7 @@ const modes = new Set<FaqSourceMode>(['sitemap', 'urls', 'text'])
 
 export async function POST(request: Request) {
   try {
-    const { scope, error } = await requireTochatScope()
+    const { scope, error } = await requireTochatScope({ action: true })
     if (error) return error
     const { body, error: parseError } = await parseJsonBody(request)
     if (parseError) return parseError
@@ -31,7 +31,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ configured: true, ...result })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'FAQ scan failed'
-    const status = /not configured|required|invalid|private|characters|found|allowed|fetch|response/i.test(message) ? 400 : 502
+    // Client-fixable problems (bad/unresolvable/private/redirecting
+    // URLs, missing config, provider rejected the request) map to 400
+    // so the UI surfaces an actionable message; anything else is 502.
+    const status = /not configured|required|invalid|private|characters|found|allowed|fetch|response|redirect|timed out|resolve|URL/i.test(message) ? 400 : 502
     console.error('[api/tochat/faq-groups/scan] failed:', message)
     return NextResponse.json({ error: message }, { status })
   }

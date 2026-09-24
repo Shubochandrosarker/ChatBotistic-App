@@ -1,6 +1,9 @@
-import { lookup } from 'node:dns/promises'
-import { isIP } from 'node:net'
 import { chatCompletion, isCloudflareAIConfigured } from '@/lib/ai/cloudflare'
+import {
+  assertPublicUrl,
+  fetchTextPinned,
+  type ValidatedUrl,
+} from '@/lib/ai/url-guard'
 
 const MAX_SITEMAP_URLS = 20
 const MAX_DIRECT_URLS = 20
@@ -26,74 +29,11 @@ function fail(message: string): never {
   throw new Error(message)
 }
 
-function privateIp(address: string): boolean {
-  if (isIP(address) === 4) {
-    const [a, b] = address.split('.').map(Number)
-    return a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)
-  }
-  const normalized = address.toLowerCase()
-  return normalized === '::1' || normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe80:')
-}
-
-async function assertPublicUrl(raw: string): Promise<URL> {
-  let url: URL
-  try {
-    url = new URL(raw)
-  } catch {
-    fail(`Invalid URL: ${raw}`)
-  }
-  if (!['http:', 'https:'].includes(url.protocol)) fail('Only HTTP and HTTPS URLs are allowed.')
-  if (url.username || url.password || url.hostname === 'localhost' || url.hostname.endsWith('.local')) {
-    fail('Private, local, and credentialed URLs are not allowed.')
-  }
-
-  const addresses = isIP(url.hostname) ? [url.hostname] : (await lookup(url.hostname, { all: true })).map((entry) => entry.address)
-  if (addresses.some(privateIp)) fail('The requested URL resolves to a private network address.')
-  return url
-}
-
-async function readLimited(response: Response): Promise<string> {
-  if (!response.body) return (await response.text()).slice(0, MAX_PAGE_BYTES)
-  const reader = response.body.getReader()
-  const chunks: Uint8Array[] = []
-  let total = 0
-  try {
-    while (total <= MAX_PAGE_BYTES) {
-      const { done, value } = await reader.read()
-      if (done) break
-      if (!value) continue
-      total += value.byteLength
-      chunks.push(value)
-      if (total > MAX_PAGE_BYTES) break
-    }
-  } finally {
-    await reader.cancel().catch(() => undefined)
-  }
-  const merged = new Uint8Array(Math.min(total, MAX_PAGE_BYTES))
-  let offset = 0
-  for (const chunk of chunks) {
-    const slice = chunk.subarray(0, Math.max(0, merged.length - offset))
-    merged.set(slice, offset)
-    offset += slice.length
-    if (offset >= merged.length) break
-  }
-  return new TextDecoder().decode(merged)
-}
-
-async function fetchPublicText(url: URL): Promise<string> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
-  try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      redirect: 'error',
-      headers: { 'User-Agent': 'ChatbotisticFaqScanner/1.0', Accept: 'text/html, application/xml, text/xml;q=0.9' },
-    })
-    if (!response.ok) fail(`Could not fetch ${url.href} (HTTP ${response.status}).`)
-    return await readLimited(response)
-  } finally {
-    clearTimeout(timeout)
-  }
+async function fetchPublicText(validated: ValidatedUrl): Promise<string> {
+  return fetchTextPinned(validated, {
+    timeoutMs: FETCH_TIMEOUT_MS,
+    maxBytes: MAX_PAGE_BYTES,
+  })
 }
 
 function decodeEntities(value: string): string {
@@ -124,23 +64,24 @@ function sitemapLocs(xml: string): string[] {
   return [...xml.matchAll(/<loc[^>]*>\s*([^<]+?)\s*<\/loc>/gi)].map((match) => decodeEntities(match[1].trim())).filter(Boolean)
 }
 
-async function sitemapPages(start: URL): Promise<string[]> {
-  const queue: Array<{ url: URL; depth: number }> = [{ url: start, depth: 0 }]
-  const pages: string[] = []
+async function sitemapPages(start: ValidatedUrl): Promise<ValidatedUrl[]> {
+  const queue: Array<{ validated: ValidatedUrl; depth: number }> = [{ validated: start, depth: 0 }]
+  const pages: ValidatedUrl[] = []
   const seen = new Set<string>()
   while (queue.length && pages.length < MAX_SITEMAP_URLS) {
     const current = queue.shift()!
-    if (seen.has(current.url.href)) continue
-    seen.add(current.url.href)
-    const content = await fetchPublicText(current.url)
+    if (seen.has(current.validated.url.href)) continue
+    seen.add(current.validated.url.href)
+    const content = await fetchPublicText(current.validated)
     const locs = sitemapLocs(content)
     const looksLikeIndex = /<sitemapindex\b/i.test(content)
     for (const loc of locs) {
       const candidate = await assertPublicUrl(loc)
-      if (looksLikeIndex && current.depth < 1 && /\.xml(?:$|[?#])/i.test(candidate.pathname)) {
-        queue.push({ url: candidate, depth: current.depth + 1 })
-      } else if (!/\.xml(?:$|[?#])/i.test(candidate.pathname)) {
-        pages.push(candidate.href)
+      const isXml = /\.xml(?:$|[?#])/i.test(candidate.url.pathname)
+      if (looksLikeIndex && current.depth < 1 && isXml) {
+        queue.push({ validated: candidate, depth: current.depth + 1 })
+      } else if (!isXml) {
+        pages.push(candidate)
         if (pages.length >= MAX_SITEMAP_URLS) break
       }
     }
@@ -182,14 +123,15 @@ export async function scanFaqSource(input: {
   if (input.mode === 'sitemap') {
     if (!input.sitemapUrl?.trim()) fail('A sitemap URL is required.')
     const sitemap = await assertPublicUrl(input.sitemapUrl.trim())
-    sources = await sitemapPages(sitemap)
-    context = (await Promise.all((await Promise.all(sources.map(assertPublicUrl))).slice(0, MAX_SITEMAP_URLS).map(async (url) => `${url.href}\n${htmlToText(await fetchPublicText(url))}`))).join('\n\n').slice(0, MAX_CONTEXT_CHARS)
+    const pages = await sitemapPages(sitemap)
+    sources = pages.map((page) => page.url.href)
+    context = (await Promise.all(pages.map(async (page) => `${page.url.href}\n${htmlToText(await fetchPublicText(page))}`))).join('\n\n').slice(0, MAX_CONTEXT_CHARS)
   } else if (input.mode === 'urls') {
     const rawUrls = (input.urls ?? []).map((url) => url.trim()).filter(Boolean).slice(0, MAX_DIRECT_URLS)
     if (!rawUrls.length) fail('Add at least one website URL.')
     const validated = await Promise.all(rawUrls.map(assertPublicUrl))
-    sources = validated.map((url) => url.href)
-    context = (await Promise.all(validated.map(async (url) => `${url.href}\n${htmlToText(await fetchPublicText(url))}`))).join('\n\n').slice(0, MAX_CONTEXT_CHARS)
+    sources = validated.map((page) => page.url.href)
+    context = (await Promise.all(validated.map(async (page) => `${page.url.href}\n${htmlToText(await fetchPublicText(page))}`))).join('\n\n').slice(0, MAX_CONTEXT_CHARS)
   } else {
     const text = input.text?.trim() ?? ''
     if (!text) fail('Custom text is required.')

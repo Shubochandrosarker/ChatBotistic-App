@@ -111,12 +111,16 @@ const nextConfig: NextConfig = {
   /**
    * Legacy tochat.be white-label paths, proxied transparently so the
    * live 360 Dialog webhook (app.chatbotistic.com/whatsapp-inbox/…),
-   * widget user logins, marketplace and v2 REST API keep working on
-   * this domain. Mirrors the Sep-11 deployment config.
+   * widget user logins, marketplace, published landing pages and v2
+   * REST API keep working on this domain. Mirrors the Sep-11
+   * deployment config; /land/:path* was missing from that list, which
+   * 404'd every published widget landing page (the provider's landing
+   * editor publishes to {domain}/land/{slug}).
    */
   async rewrites() {
     return {
       beforeFiles: [
+        { source: '/land/:path*', destination: 'https://services.tochat.be/land/:path*' },
         { source: '/whatsapp-inbox/:path*', destination: 'https://services.tochat.be/whatsapp-inbox/:path*' },
         { source: '/widget/:path*', destination: 'https://services.tochat.be/widget/:path*' },
         { source: '/marketplace/:path*', destination: 'https://services.tochat.be/marketplace/:path*' },
@@ -128,6 +132,23 @@ const nextConfig: NextConfig = {
         { source: '/docs/:path*', destination: 'https://services.tochat.be/docs/:path*' },
       ],
     }
+  },
+
+  /**
+   * The pricing page shipped with its Free-plan CTA pointing at
+   * /register — a route this app never had (signup lives at /signup),
+   * so the primary conversion path 404'd. The CTA now links directly
+   * to /signup; this redirect keeps any /register link in the wild
+   * (marketing site, emails, docs) working too.
+   */
+  async redirects() {
+    return [
+      {
+        source: '/register',
+        destination: '/signup?plan=free',
+        permanent: true,
+      },
+    ]
   },
 
   async headers() {

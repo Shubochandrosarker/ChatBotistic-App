@@ -172,7 +172,7 @@ export default function PricingPage() {
                 <div className="mt-6 pt-2">
                   {plan.slug === "free" ? (
                     <Link
-                      href="/register"
+                      href="/signup?plan=free"
                       className={cn(
                         buttonVariants({ variant: plan.highlight ? "default" : "outline" }),
                         "w-full",

@@ -17,6 +17,7 @@ import {
   isWithinQuietHours,
   logSms,
 } from '@/lib/sms/compliance'
+import { checkMonthlyMessageCap } from '@/lib/tochat/entitlements'
 
 interface BroadcastResult {
   phone: string
@@ -101,6 +102,21 @@ export async function POST(request: Request) {
             'Provide either `recipients` (preferred) or `phone_numbers` — must be a non-empty array',
         },
         { status: 400 }
+      )
+    }
+
+    // Plan entitlement: reject a campaign that would blow past the
+    // org's monthly message allowance before the first send, not
+    // halfway through the fan-out.
+    const messageCap = await checkMonthlyMessageCap(supabase, user.id, recipients.length)
+    if (!messageCap.allowed) {
+      return NextResponse.json(
+        {
+          error: messageCap.message,
+          limit: messageCap.limit,
+          attempted: recipients.length,
+        },
+        { status: 403 },
       )
     }
 

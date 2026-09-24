@@ -37,6 +37,10 @@ export interface SsoClaims {
   domain_limit?: number
   /** Monthly active-contact cap. 0 means unlimited. */
   contact_limit?: number
+  /** Max org members. Negative means unlimited. */
+  seat_limit?: number
+  /** Max outbound messages per calendar month. Negative means unlimited. */
+  message_limit?: number
   /** Whether the plan ships the fully white-labelled chat widget. */
   white_label?: boolean
   allowed_domains?: string[]

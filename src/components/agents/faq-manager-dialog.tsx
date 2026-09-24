@@ -122,8 +122,12 @@ export function FaqManagerDialog({ open, onOpenChange, agent }: FaqManagerDialog
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast.error(data.error ?? 'Could not generate FAQs');
+      if (!res.ok || data.configured === false) {
+        toast.error(
+          data.configured === false
+            ? 'Connect your Chatbotistic account in Settings, then scan again.'
+            : data.error ?? 'Could not generate FAQs',
+        );
         return;
       }
       setRows(data.faqs?.length ? data.faqs : [emptyRow()]);
