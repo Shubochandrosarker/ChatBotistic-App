@@ -24,7 +24,9 @@ export interface ChatbotisticLead {
   message: string | null
   source: string | null
   country: string | null
+  /** The agent/operator whose chat captured the lead, when known. */
   agent: string | null
+  /** The widget/chat name the lead came through, when known. */
   widget: string | null
   landingUrl: string | null
   utm: string | null
@@ -163,13 +165,22 @@ function normaliseLead(
       pick(record, ['country', 'pais', 'país', 'countryCode']) ??
       fieldByLabel(fields, ['country', 'pais', 'país']),
     agent:
-      pick(record, ['agent', 'agentName', 'operator', 'operatorName', 'whatsappOperator']) ??
-      fieldByLabel(fields, ['agent', 'operator', 'whatsapp agent']),
+      pick(record, [
+        'agent',
+        'agentName',
+        'agent_name',
+        'operator',
+        'operatorName',
+        'operator_name',
+        'agentTitle',
+        'whatsappOperator',
+      ]) ??
+      fieldByLabel(fields, ['agent', 'agente', 'operador', 'operator', 'whatsapp agent']),
     widget:
-      pick(record, ['widget', 'widgetName', 'business', 'businessName']) ??
-      fieldByLabel(fields, ['widget', 'business']),
+      pick(record, ['widget', 'widgetName', 'widget_name', 'chatName', 'chat', 'bot', 'business', 'businessName']) ??
+      fieldByLabel(fields, ['widget', 'chat', 'bot', 'business']),
     landingUrl:
-      pick(record, ['url', 'urlLead', 'url_lead', 'landing', 'referer', 'URL_LEAD']) ??
+      pick(record, ['url', 'urlLead', 'url_lead', 'landing', 'URL_LEAD']) ??
       fieldByLabel(fields, ['url_lead', 'url lead', 'landing', 'url_first']),
     utm:
       pick(record, ['utm', 'utmMedium', 'utm_medium', 'utmSource', 'utm_source']) ??

@@ -361,8 +361,8 @@ export function BookingConfigDialog({ open, onOpenChange, agent }: BookingConfig
             )}
           </div>
         ) : (
-          <div className="max-h-[65vh] space-y-5 overflow-y-auto pr-1">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="max-h-[min(70vh,calc(100dvh-15rem))] space-y-5 overflow-y-auto pr-1">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="bc-start" className="text-foreground">
                   Start date
@@ -389,7 +389,7 @@ export function BookingConfigDialog({ open, onOpenChange, agent }: BookingConfig
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">
                 <Label htmlFor="bc-duration" className="text-foreground">
                   Slot length (min)

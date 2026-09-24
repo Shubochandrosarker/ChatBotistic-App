@@ -19,8 +19,11 @@
 //      header, SNI, and TLS certificate validation all still check
 //      the real hostname.
 //
-// Redirects are not followed: a redirect target would need its own
-// validation pass, and none of the callers need them.
+// Redirects are followed (up to MAX_REDIRECTS hops) because normal
+// websites redirect constantly (http→https, trailing-slash
+// canonicalisation, sitemap index pointers). Every hop goes through
+// the same validation as the first URL before anything is fetched, so
+// a redirect can never smuggle the fetch to a private address.
 
 import { lookup as dnsLookup } from 'node:dns/promises'
 import { isIP } from 'node:net'
@@ -158,8 +161,11 @@ export async function assertPublicUrl(raw: string): Promise<ValidatedUrl> {
         fail('The requested URL resolves to a private network address.')
       }
     }
-    const first = entries[0]
-    if (!first) fail(`Could not resolve ${hostname}.`)
+    if (!entries.length) fail(`Could not resolve ${hostname}.`)
+    // Prefer an IPv4 answer when the resolver offers both families:
+    // many container/VPS networks resolve AAAA records but have no
+    // IPv6 route, and connecting to the v6 pin would always fail.
+    const first = entries.find((entry) => entry.family !== 6) ?? entries[0]
     address = first.address
     family = first.family === 6 ? 6 : 4
   }
@@ -193,21 +199,23 @@ export interface FetchLimits {
   maxBytes: number
 }
 
-/**
- * GET a URL whose hostname has already been validated, connecting only
- * to `validated.address` (never re-resolving). Redirects are rejected,
- * the response body is truncated at maxBytes, and the request aborts
- * after timeoutMs.
- */
-export async function fetchTextPinned(
+/** Hard cap on redirect hops — mirrors common browser behaviour. */
+export const MAX_REDIRECTS = 5
+
+interface HopResult {
+  status: number
+  location: string | null
+  body: string
+}
+
+function fetchSingleHop(
   validated: ValidatedUrl,
   limits: FetchLimits,
-  userAgent = 'ChatbotisticFaqScanner/1.0',
-  sameHostRedirects = 2,
-): Promise<string> {
+  userAgent: string,
+): Promise<HopResult> {
   const { url } = validated
   const send = url.protocol === 'https:' ? httpsRequest : httpRequest
-  return await new Promise<string>((resolve, reject) => {
+  return new Promise<HopResult>((resolve, reject) => {
     const req = send(url, {
       lookup: pinnedLookup(validated.address, validated.family),
       headers: {
@@ -220,12 +228,12 @@ export async function fetchTextPinned(
     let total = 0
     let settled = false
 
-    function finish(error: Error | null, body?: string) {
+    function finish(error: Error | null, result?: HopResult) {
       if (settled) return
       settled = true
       clearTimeout(timer)
       if (error) reject(error)
-      else resolve(body ?? '')
+      else resolve(result ?? { status: 0, location: null, body: '' })
     }
 
     const timer = setTimeout(() => {
@@ -238,55 +246,81 @@ export async function fetchTextPinned(
     req.on('error', (err) => finish(err))
     req.on('response', (response) => {
       const status = response.statusCode ?? 0
-      if (status >= 300 && status < 400) {
-        const location = response.headers.location
+      const location =
+        typeof response.headers.location === 'string' && response.headers.location.trim()
+          ? response.headers.location.trim()
+          : null
+
+      // Redirect hop: drain and let the caller decide with the
+      // validated next URL.
+      if (status >= 300 && status < 400 && location) {
         response.resume()
-        req.destroy()
-        if (!location || sameHostRedirects <= 0) {
-          const where = location ? ` (redirects to ${location})` : ''
-          finish(new Error(`Redirects are not allowed when fetching ${url.href}${where}.`))
-          return
-        }
-        let next: URL
-        try {
-          next = new URL(location, url)
-        } catch {
-          finish(new Error(`Redirects are not allowed when fetching ${url.href} (redirects to ${location}).`))
-          return
-        }
-        if (next.hostname !== url.hostname) {
-          finish(new Error(`Redirects are not allowed when fetching ${url.href} (redirects to ${next.href}).`))
-          return
-        }
-        if (!['http:', 'https:'].includes(next.protocol)) {
-          finish(new Error(`Redirects are not allowed when fetching ${url.href} (redirects to ${next.href}).`))
-          return
-        }
-        fetchTextPinned(
-          { url: next, address: validated.address, family: validated.family },
-          limits,
-          userAgent,
-          sameHostRedirects - 1,
-        ).then((body) => finish(null, body), (err) => finish(err instanceof Error ? err : new Error(String(err))))
+        finish(null, { status, location, body: '' })
         return
       }
-      if (status >= 400) {
-        response.resume()
-        finish(new Error(`Fetch of ${url.href} failed with HTTP ${status}.`))
-        req.destroy()
-        return
-      }
+
       response.on('data', (chunk: Buffer) => {
         total += chunk.byteLength
         chunks.push(chunk)
         if (total >= limits.maxBytes) {
           response.destroy()
-          finish(null, Buffer.concat(chunks).subarray(0, limits.maxBytes).toString('utf8'))
+          finish(null, {
+            status,
+            location,
+            body: Buffer.concat(chunks).subarray(0, limits.maxBytes).toString('utf8'),
+          })
         }
       })
-      response.on('end', () => finish(null, Buffer.concat(chunks).toString('utf8')))
+      response.on('end', () =>
+        finish(null, { status, location, body: Buffer.concat(chunks).toString('utf8') }),
+      )
       response.on('error', (err) => finish(err))
     })
     req.end()
   })
+}
+
+/**
+ * GET a URL whose hostname has already been validated, connecting only
+ * to `validated.address` (never re-resolving). Redirects are followed
+ * up to MAX_REDIRECTS hops, and every hop is re-validated with
+ * `assertPublicUrl` before it is fetched. The response body is
+ * truncated at maxBytes and each hop aborts after timeoutMs.
+ */
+export async function fetchTextPinned(
+  validated: ValidatedUrl,
+  limits: FetchLimits,
+  userAgent = 'ChatbotisticFaqScanner/1.0',
+  options: { validateHop?: (raw: string) => Promise<ValidatedUrl> } = {},
+): Promise<string> {
+  const validateHop = options.validateHop ?? assertPublicUrl
+  let current = validated
+  for (let hop = 0; ; hop++) {
+    const response = await fetchSingleHop(current, limits, userAgent)
+
+    if (response.status >= 300 && response.status < 400) {
+      if (!response.location) {
+        throw new Error(`The URL ${current.url.href} returned HTTP ${response.status} without a redirect target.`)
+      }
+      if (hop >= MAX_REDIRECTS) {
+        throw new Error(`The URL redirected more than ${MAX_REDIRECTS} times.`)
+      }
+      let target: URL
+      try {
+        target = new URL(response.location, current.url)
+      } catch {
+        throw new Error(`The URL ${current.url.href} redirected to an invalid location.`)
+      }
+      // Same SSRF rules as the original URL: scheme, credentials,
+      // localhost, and private/reserved addresses are all rejected
+      // before anything is fetched.
+      current = await validateHop(target.toString())
+      continue
+    }
+
+    if (response.status < 200 || response.status >= 300) {
+      throw new Error(`The URL ${current.url.href} returned HTTP ${response.status}.`)
+    }
+    return response.body
+  }
 }
