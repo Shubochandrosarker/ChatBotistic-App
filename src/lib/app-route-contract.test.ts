@@ -31,9 +31,8 @@ describe('pricing → signup conversion path', () => {
 describe('published landing pages', () => {
   const config = readRepoFile('next.config.ts')
 
-  it('proxies /land/:path* to the white-label backend', () => {
-    expect(config).toMatch(/source:\s*'\/land\/:path\*'/)
-    expect(config).toMatch(/destination:\s*'https:\/\/services\.tochat\.be\/land\/:path\*'/)
+  it('does not proxy /land/:path* to the provider (native slug route owns it)', () => {
+    expect(config).not.toMatch(/source:\s*'\/land\/:path\*'/)
   })
 
   it('permanently redirects legacy /register links to signup', () => {
