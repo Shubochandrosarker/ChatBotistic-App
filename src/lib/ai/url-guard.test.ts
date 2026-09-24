@@ -101,13 +101,28 @@ describe('fetchTextPinned', () => {
         res.end()
         return
       }
-      if (req.url?.startsWith('/redirect-same')) {
-        res.writeHead(302, { location: '/page' })
+      if (req.url === '/redirect') {
+        res.writeHead(302, { location: `/final` })
         res.end()
         return
       }
+      if (req.url === '/redirect-private') {
+        res.writeHead(301, { location: 'http://192.168.0.1/admin' })
+        res.end()
+        return
+      }
+      if (req.url?.startsWith('/loop')) {
+        res.writeHead(302, { location: `/loop?n=${Date.now()}` })
+        res.end()
+        return
+      }
+      if (req.url === '/missing') {
+        res.writeHead(404, { 'content-type': 'text/plain' })
+        res.end('nope')
+        return
+      }
       res.writeHead(200, { 'content-type': 'text/html' })
-      res.end('<html><body>hello</body></html>')
+      res.end(req.url === '/final' ? 'final page body' : '<html><body>hello</body></html>')
     })
     await new Promise<void>((resolvePromise) => server.listen(0, '127.0.0.1', resolvePromise))
     port = (server.address() as { port: number }).port
@@ -117,36 +132,66 @@ describe('fetchTextPinned', () => {
     await new Promise<void>((resolvePromise) => server.close(() => resolvePromise()))
   })
 
+  // Redirect targets must go through assertPublicUrl, which resolves
+  // real DNS — impossible for the example.test fixture host. Injecting
+  // the hop validator keeps the production path (default parameter)
+  // unchanged while making these tests deterministic.
+  const localHop = async (raw: string) => {
+    const url = new URL(raw)
+    expect(url.hostname).toBe('example.test')
+    return { url, address: '127.0.0.1', family: 4 as const }
+  }
+
+  const pinned = (path: string) => ({
+    url: new URL(`http://example.test:${port}${path}`),
+    address: '127.0.0.1',
+    family: 4 as const,
+  })
+
   it('connects to the pinned address while preserving the real Host header', async () => {
     // example.test does not resolve to 127.0.0.1 — the only way this
     // fetch can succeed is the pin. A re-resolving implementation
     // would fail (or, in a rebinding attack, connect to the wrong host).
-    const text = await fetchTextPinned(
-      {
-        url: new URL(`http://example.test:${port}/page`),
-        address: '127.0.0.1',
-        family: 4,
-      },
-      { timeoutMs: 3000, maxBytes: 10_000 },
-    )
+    const text = await fetchTextPinned(pinned('/page'), { timeoutMs: 3000, maxBytes: 10_000 })
     expect(text).toContain('hello')
     expect(sawHost).toBe(`example.test:${port}`)
   })
 
-  it('rejects off-host redirects with an actionable error', async () => {
-    await expect(
-      fetchTextPinned(
-        { url: new URL(`http://example.test:${port}/redirect-offhost`), address: '127.0.0.1', family: 4 },
-        { timeoutMs: 3000, maxBytes: 10_000 },
-      ),
-    ).rejects.toThrow(/Redirects are not allowed/)
+  it('follows a same-origin redirect to the final page', async () => {
+    const text = await fetchTextPinned(pinned('/redirect'), { timeoutMs: 3000, maxBytes: 10_000 }, undefined, {
+      validateHop: localHop,
+    })
+    expect(text).toBe('final page body')
+    expect(sawHost).toBe(`example.test:${port}`)
   })
 
-  it('follows a same-host relative redirect', async () => {
+  it('rejects a redirect whose target resolves to a private address (default validator)', async () => {
+    await expect(
+      fetchTextPinned(pinned('/redirect-private'), { timeoutMs: 3000, maxBytes: 10_000 }),
+    ).rejects.toThrow(/private network address/)
+  })
+
+  it('stops redirect loops at MAX_REDIRECTS hops', async () => {
+    await expect(
+      fetchTextPinned(pinned('/loop'), { timeoutMs: 3000, maxBytes: 10_000 }, undefined, {
+        validateHop: localHop,
+      }),
+    ).rejects.toThrow(/redirected more than 5 times/)
+  })
+
+  it('surfaces non-2xx, non-redirect statuses as actionable errors', async () => {
+    await expect(
+      fetchTextPinned(pinned('/missing'), { timeoutMs: 3000, maxBytes: 10_000 }),
+    ).rejects.toThrow(/HTTP 404/)
+  })
+
+  it('follows a relative redirect through the validated-hop path', async () => {
     const text = await fetchTextPinned(
-      { url: new URL(`http://example.test:${port}/redirect-same`), address: '127.0.0.1', family: 4 },
+      { url: new URL(`http://example.test:${port}/redirect`), address: '127.0.0.1', family: 4 },
       { timeoutMs: 3000, maxBytes: 10_000 },
+      undefined,
+      { validateHop: localHop },
     )
-    expect(text).toContain('hello')
+    expect(text).toContain('final page body')
   })
 })

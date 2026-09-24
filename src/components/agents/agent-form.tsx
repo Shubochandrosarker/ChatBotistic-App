@@ -144,8 +144,8 @@ export function AgentForm({ open, onOpenChange, agent, widgets, onSaved }: Agent
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="max-h-[min(70vh,calc(100dvh-15rem))] space-y-4 overflow-y-auto pr-1">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="af-name" className="text-foreground">
                 Name <span className="text-red-400">*</span>
@@ -200,7 +200,7 @@ export function AgentForm({ open, onOpenChange, agent, widgets, onSaved }: Agent
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="af-post" className="text-foreground">
                 Job title

@@ -389,7 +389,7 @@ export function WidgetForm({ open, onOpenChange, widget, onSaved }: WidgetFormPr
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
-          <div className="max-h-[65vh] space-y-4 overflow-y-auto pr-1">
+          <div className="max-h-[min(70vh,calc(100dvh-15rem))] space-y-4 overflow-y-auto pr-1">
             <Tabs defaultValue="general">
               <TabsList className="mb-3 flex-wrap bg-muted">
                 <TabsTrigger value="general">General</TabsTrigger>
@@ -433,7 +433,7 @@ export function WidgetForm({ open, onOpenChange, widget, onSaved }: WidgetFormPr
               </TabsContent>
 
               <TabsContent value="appearance" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="wf-color" className="text-foreground">
                       Brand color
@@ -472,7 +472,7 @@ export function WidgetForm({ open, onOpenChange, widget, onSaved }: WidgetFormPr
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <ToggleField
                     id="wf-rightpos"
                     label="Right side"
@@ -539,7 +539,7 @@ export function WidgetForm({ open, onOpenChange, widget, onSaved }: WidgetFormPr
                   onChange={(v) => set('welcomeBackMessage', v)}
                   placeholder="Welcome back!"
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <TextField
                     id="wf-button-message"
                     label="Button label"
@@ -555,7 +555,7 @@ export function WidgetForm({ open, onOpenChange, widget, onSaved }: WidgetFormPr
                     placeholder="This is my landing!"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <TextField
                     id="wf-success"
                     label="Success message"
@@ -570,7 +570,7 @@ export function WidgetForm({ open, onOpenChange, widget, onSaved }: WidgetFormPr
                     onChange={(v) => set('translateChatAnswer', v)}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <TextField
                     id="wf-online-from"
                     label={'"Online from" label'}
@@ -586,7 +586,7 @@ export function WidgetForm({ open, onOpenChange, widget, onSaved }: WidgetFormPr
                     placeholder="Show timetable"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <TextField
                     id="wf-show-all-agents"
                     label={'"Show all agents" label'}
@@ -600,7 +600,7 @@ export function WidgetForm({ open, onOpenChange, widget, onSaved }: WidgetFormPr
                     onChange={(v) => set('showLessAgents', v)}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <TextField
                     id="wf-phone-label"
                     label="Phone field label"
@@ -616,7 +616,7 @@ export function WidgetForm({ open, onOpenChange, widget, onSaved }: WidgetFormPr
                     placeholder="This telephone number is not valid"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <TextField
                     id="wf-required-validation"
                     label={'"Required" error'}
@@ -674,7 +674,7 @@ export function WidgetForm({ open, onOpenChange, widget, onSaved }: WidgetFormPr
                     — live once you save. Set the slug under the General tab.
                   </p>
                 )}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="wf-landing-primary" className="text-foreground">
                       Landing primary color

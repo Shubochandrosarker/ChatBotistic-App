@@ -50,6 +50,28 @@ function text(value: unknown, fallback = ''): string {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback
 }
 
+/**
+ * The provider's editors let owners paste rich text/HTML into the
+ * marketing fields. This is a text-only page, so strip tags and decode
+ * the common entities instead of printing them literally.
+ */
+function plain(value: unknown, fallback = ''): string {
+  const raw = text(value)
+  if (!raw) return fallback
+  return raw
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim() || fallback
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -88,7 +110,7 @@ export default async function WidgetLandingPage({
   const widget = await loadWidget(uuid)
   if (!widget) notFound()
 
-  const name = text(widget.legend, widget.name) || 'Chat with us'
+  const name = plain(widget.legend, plain(widget.name)) || 'Chat with us'
   const primary = /^#[0-9a-fA-F]{3,8}$/.test(text(widget.landingPrimaryColor))
     ? text(widget.landingPrimaryColor)
     : /^#[0-9a-fA-F]{3,8}$/.test(text(widget.color))
@@ -97,10 +119,10 @@ export default async function WidgetLandingPage({
   const secondary = /^#[0-9a-fA-F]{3,8}$/.test(text(widget.landingSecondaryColor))
     ? text(widget.landingSecondaryColor)
     : primary
-  const greeting = text(widget.widgetMessage, 'Hi! How can we help you today?')
-  const legal = text(widget.landingLegal)
-  const terms = text(widget.landingTermsAndConditions)
-  const privacy = text(widget.landingPrivacy)
+  const greeting = plain(widget.widgetMessage, 'Hi! How can we help you today?')
+  const legal = plain(widget.landingLegal)
+  const terms = plain(widget.landingTermsAndConditions)
+  const privacy = plain(widget.landingPrivacy)
   const active = widget.active !== false
 
   // Distinct unpublished state: the page exists but the owner paused
@@ -146,7 +168,7 @@ export default async function WidgetLandingPage({
       </header>
 
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col items-center justify-center gap-8 px-6 py-16 text-center">
-        <h1 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+        <h1 className="text-balance whitespace-pre-line text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
           {greeting}
         </h1>
         <p className="max-w-xl text-pretty text-muted-foreground sm:text-lg">
@@ -180,7 +202,7 @@ export default async function WidgetLandingPage({
       {(legal || terms || privacy) && (
         <footer className="border-t border-border bg-card px-6 py-8">
           <div className="mx-auto max-w-4xl space-y-4 text-xs leading-relaxed text-muted-foreground">
-            {legal && <p>{legal}</p>}
+            {legal && <p className="whitespace-pre-line">{legal}</p>}
             {terms && (
               <details>
                 <summary className="cursor-pointer font-medium text-foreground">
