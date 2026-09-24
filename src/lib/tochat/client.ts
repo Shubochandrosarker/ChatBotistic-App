@@ -448,6 +448,19 @@ export const widgets = {
     ),
   get: (scope: TochatScope, id: string) =>
     request(scope, `/api/v2/widgets/${encodeURIComponent(id)}`, 'GET') as Promise<TochatResource>,
+  findBySlug: async (scope: TochatScope, slug: string): Promise<TochatResource | null> => {
+    const wanted = slug.trim().toLowerCase()
+    if (!wanted) return null
+    const filtered = await request(
+      scope,
+      `/api/v2/widgets?${qs({ ...tagParam(scope), slug, itemsPerPage: 30 })}`,
+      'GET',
+    ).then(collection).catch(() => [])
+    const hit = filtered.find((row) => String(row.slug || '').trim().toLowerCase() === wanted)
+    if (hit) return hit
+    const all = await widgets.list(scope)
+    return all.find((row) => String(row.slug || '').trim().toLowerCase() === wanted) ?? null
+  },
   create: (scope: TochatScope, payload: TochatResource) =>
     request(scope, '/api/v2/widgets', 'POST', {
       ...payload,

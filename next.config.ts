@@ -120,7 +120,6 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
-        { source: '/land/:path*', destination: 'https://services.tochat.be/land/:path*' },
         { source: '/whatsapp-inbox/:path*', destination: 'https://services.tochat.be/whatsapp-inbox/:path*' },
         { source: '/widget/:path*', destination: 'https://services.tochat.be/widget/:path*' },
         { source: '/marketplace/:path*', destination: 'https://services.tochat.be/marketplace/:path*' },
