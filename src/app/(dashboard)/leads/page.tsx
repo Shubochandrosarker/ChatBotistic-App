@@ -150,6 +150,7 @@ export default function LeadsPage() {
                   <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
                     <th className="px-5 py-3 font-medium">Name</th>
                     <th className="px-5 py-3 font-medium">Contact</th>
+                    <th className="px-5 py-3 font-medium">Agent</th>
                     <th className="px-5 py-3 font-medium">Message</th>
                     <th className="px-5 py-3 font-medium">Source</th>
                     <th className="px-5 py-3 font-medium">Captured</th>
@@ -181,15 +182,23 @@ export default function LeadsPage() {
                           {!lead.email && !lead.phone && '—'}
                         </div>
                       </td>
+                      <td className="px-5 py-3 text-muted-foreground">
+                        <div className="flex flex-col">
+                          <span>{lead.agent ?? '—'}</span>
+                          {lead.country && (
+                            <span className="text-xs">{lead.country}</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="max-w-xs px-5 py-3 text-muted-foreground">
                         <span className="line-clamp-2">
-                          {lead.message ?? '—'}
+                          {lead.message ?? lead.landingUrl ?? '—'}
                         </span>
                       </td>
                       <td className="px-5 py-3">
-                        {lead.source ? (
+                        {lead.source || lead.utm ? (
                           <span className="inline-flex rounded-full bg-accent px-2.5 py-0.5 text-xs font-medium text-accent-foreground">
-                            {lead.source}
+                            {lead.source ?? lead.utm}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">—</span>

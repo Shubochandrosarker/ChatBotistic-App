@@ -96,8 +96,13 @@ describe('fetchTextPinned', () => {
   beforeAll(async () => {
     server = createServer((req, res) => {
       sawHost = req.headers.host ?? null
-      if (req.url?.startsWith('/redirect')) {
+      if (req.url?.startsWith('/redirect-offhost')) {
         res.writeHead(302, { location: 'https://example.org/' })
+        res.end()
+        return
+      }
+      if (req.url?.startsWith('/redirect-same')) {
+        res.writeHead(302, { location: '/page' })
         res.end()
         return
       }
@@ -128,12 +133,20 @@ describe('fetchTextPinned', () => {
     expect(sawHost).toBe(`example.test:${port}`)
   })
 
-  it('rejects redirects with an actionable error', async () => {
+  it('rejects off-host redirects with an actionable error', async () => {
     await expect(
       fetchTextPinned(
-        { url: new URL(`http://example.test:${port}/redirect`), address: '127.0.0.1', family: 4 },
+        { url: new URL(`http://example.test:${port}/redirect-offhost`), address: '127.0.0.1', family: 4 },
         { timeoutMs: 3000, maxBytes: 10_000 },
       ),
     ).rejects.toThrow(/Redirects are not allowed/)
+  })
+
+  it('follows a same-host relative redirect', async () => {
+    const text = await fetchTextPinned(
+      { url: new URL(`http://example.test:${port}/redirect-same`), address: '127.0.0.1', family: 4 },
+      { timeoutMs: 3000, maxBytes: 10_000 },
+    )
+    expect(text).toContain('hello')
   })
 })

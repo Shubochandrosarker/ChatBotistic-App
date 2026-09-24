@@ -132,7 +132,7 @@ export function AgentForm({ open, onOpenChange, agent, widgets, onSaved }: Agent
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border text-foreground sm:max-w-md">
+      <DialogContent className="bg-card border-border text-foreground sm:max-w-md max-h-[min(92dvh,880px)] w-[calc(100%-1rem)] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-foreground">
             {isEdit ? 'Edit Agent' : 'New Agent'}

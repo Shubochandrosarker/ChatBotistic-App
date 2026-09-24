@@ -67,7 +67,7 @@ export function FaqManagerDialog({ open, onOpenChange, agent }: FaqManagerDialog
       if (!res.ok) {
         setError(data.error ?? 'Failed to load FAQs');
       } else if (data.configured === false) {
-        setError('Tochat.be is not connected.');
+        setError('Chatbotistic is not connected.');
       } else {
         setGroups(data.faqGroups ?? []);
       }
@@ -132,8 +132,11 @@ export function FaqManagerDialog({ open, onOpenChange, agent }: FaqManagerDialog
       }
       setRows(data.faqs?.length ? data.faqs : [emptyRow()]);
       setTitle((current) => current.trim() || data.titleSuggestion || 'Website FAQs');
-      setScanMeta(`${data.faqs?.length ?? 0} FAQs generated${data.sources?.length ? ` from ${data.sources.length} source${data.sources.length === 1 ? '' : 's'}` : ''}. Review them before saving.`);
-      toast.success('FAQs generated');
+      const fallbackNote = data.usedFallback
+        ? ' AI drafting was unavailable, so a reviewable draft was built from the source text.'
+        : '';
+      setScanMeta(`${data.faqs?.length ?? 0} FAQs generated${data.sources?.length ? ` from ${data.sources.length} source${data.sources.length === 1 ? '' : 's'}` : ''}.${fallbackNote} Review them before saving.`);
+      toast.success(data.usedFallback ? 'FAQ draft ready for review' : 'FAQs generated');
     } catch {
       toast.error('Could not reach the FAQ scanner');
     } finally {
@@ -181,7 +184,7 @@ export function FaqManagerDialog({ open, onOpenChange, agent }: FaqManagerDialog
         return;
       }
       if (data.configured === false) {
-        toast.error('Tochat.be is not connected.');
+        toast.error('Chatbotistic is not connected.');
         return;
       }
       toast.success(editingId ? 'FAQ group updated' : 'FAQ group created');
@@ -205,7 +208,7 @@ export function FaqManagerDialog({ open, onOpenChange, agent }: FaqManagerDialog
         return;
       }
       if (body?.configured === false) {
-        toast.error('Tochat.be is not connected.');
+        toast.error('Chatbotistic is not connected.');
         return;
       }
       toast.success('FAQ group deleted');
@@ -220,7 +223,7 @@ export function FaqManagerDialog({ open, onOpenChange, agent }: FaqManagerDialog
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border text-foreground sm:max-w-lg">
+      <DialogContent className="bg-card border-border text-foreground max-h-[min(92dvh,880px)] w-[calc(100%-1rem)] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-foreground">
             {view === 'edit' && (

@@ -1,8 +1,15 @@
 import type { TochatBookingTime, TochatWeekday } from './client'
 
 const WEEKDAYS: TochatWeekday[] = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
-const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
+/** Normalize browser time inputs (`09:00`, `9:00`, `09:00:00`) to HH:MM. */
+export function normalizeClockTime(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const match = value.trim().match(/^([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/)
+  if (!match) return null
+  return `${match[1].padStart(2, '0')}:${match[2]}`
+}
 
 // YYYY-MM-DD and HH:MM strings sort lexicographically in chronological
 // order, so plain string comparison is enough for the ordering checks
@@ -14,20 +21,22 @@ function bookingTimesError(value: unknown): string | null {
   }
   for (const t of value as unknown[]) {
     const row = t as Partial<TochatBookingTime>
+    const from = normalizeClockTime(row?.availableFrom)
+    const until = normalizeClockTime(row?.availableUntil)
     if (
       !row ||
       typeof row !== 'object' ||
       !WEEKDAYS.includes(row.day as TochatWeekday) ||
-      typeof row.availableFrom !== 'string' ||
-      !TIME_RE.test(row.availableFrom) ||
-      typeof row.availableUntil !== 'string' ||
-      !TIME_RE.test(row.availableUntil)
+      !from ||
+      !until
     ) {
       return 'At least one valid `bookingTimes` entry ({ day, availableFrom, availableUntil }) is required'
     }
-    if (row.availableUntil <= row.availableFrom) {
-      return `\`bookingTimes\` window for ${row.day} must end after it starts (${row.availableFrom}–${row.availableUntil})`
+    if (until <= from) {
+      return `Availability for ${row.day} must end after it starts. Use 24-hour time (09:00–17:00, not 09:00–05:00).`
     }
+    ;(row as TochatBookingTime).availableFrom = from
+    ;(row as TochatBookingTime).availableUntil = until
   }
   return null
 }
@@ -88,7 +97,13 @@ export function normalizeBookingConfigPayload(payload: Record<string, unknown>) 
       typeof payload.availablePlacePerSlot === 'number' ? payload.availablePlacePerSlot : 1,
     allowedHourUntilBooking:
       typeof payload.allowedHourUntilBooking === 'number' ? payload.allowedHourUntilBooking : 0,
-    bookingTimes: payload.bookingTimes,
+    bookingTimes: Array.isArray(payload.bookingTimes)
+      ? (payload.bookingTimes as Array<Record<string, unknown>>).map((row) => ({
+          ...row,
+          availableFrom: normalizeClockTime(row.availableFrom) ?? row.availableFrom,
+          availableUntil: normalizeClockTime(row.availableUntil) ?? row.availableUntil,
+        }))
+      : payload.bookingTimes,
     timezone: payload.timezone,
     sendReminder: payload.sendReminder !== false,
     sendReminder48: payload.sendReminder48 !== false,

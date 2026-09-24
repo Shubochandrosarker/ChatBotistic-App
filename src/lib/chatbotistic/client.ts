@@ -24,6 +24,11 @@ export interface ChatbotisticLead {
   message: string | null
   source: string | null
   country: string | null
+  agent: string | null
+  widget: string | null
+  landingUrl: string | null
+  utm: string | null
+  ip: string | null
   createdAt: string | null
   /** Every captured form field, as label/value pairs. */
   fields: { label: string; value: string }[]
@@ -68,12 +73,24 @@ export function isChatbotisticConfigured(): boolean {
 }
 
 // Case-insensitive lookup across a list of candidate keys.
+function stringifyUnknown(value: unknown): string | null {
+  if (value == null || value === '') return null
+  if (typeof value === 'string' || typeof value === 'number') return String(value)
+  if (typeof value === 'object') {
+    const obj = value as Record<string, unknown>
+    for (const key of ['name', 'title', 'label', 'email', 'phone']) {
+      if (obj[key] != null && obj[key] !== '') return String(obj[key])
+    }
+  }
+  return null
+}
+
 function pick(record: Record<string, unknown>, keys: string[]): string | null {
   for (const key of keys) {
     for (const actual of Object.keys(record)) {
       if (actual.toLowerCase() === key.toLowerCase()) {
-        const value = record[actual]
-        if (value != null && value !== '') return String(value)
+        const mapped = stringifyUnknown(record[actual])
+        if (mapped) return mapped
       }
     }
   }
@@ -128,20 +145,38 @@ function normaliseLead(
       pick(record, ['id', '_id', 'leadId', 'lead_id', 'uuid']) ??
       `lead-${index}`,
     name:
-      pick(record, ['name', 'fullName', 'full_name', 'firstName', 'contactName']) ??
+      pick(record, ['name', 'fullName', 'full_name', 'firstName', 'contactName', 'nombre']) ??
       fieldByLabel(fields, ['name', 'nombre', 'nom']),
     email:
-      pick(record, ['email', 'emailAddress', 'email_address']) ??
+      pick(record, ['email', 'emailAddress', 'email_address', 'mail']) ??
       fieldByLabel(fields, ['email', 'correo', 'mail']),
     phone:
-      pick(record, ['phone', 'phoneNumber', 'phone_number', 'mobile', 'whatsapp']) ??
-      fieldByLabel(fields, ['phone', 'tel', 'teléfono', 'telefono', 'whatsapp', 'móvil', 'movil']),
+      pick(record, ['phone', 'phoneNumber', 'phone_number', 'mobile', 'whatsapp', 'whatsappNumber', 'tel', 'telephone']) ??
+      fieldByLabel(fields, ['phone', 'tel', 'teléfono', 'telefono', 'whatsapp', 'móvil', 'movil', 'number']),
     message:
-      pick(record, ['message', 'text', 'note', 'notes', 'enquiry', 'comment']) ??
-      fieldByLabel(fields, ['message', 'mensaje', 'comment', 'comentario', 'enquiry']),
+      pick(record, ['message', 'text', 'note', 'notes', 'enquiry', 'comment', 'lastMessage']) ??
+      fieldByLabel(fields, ['message', 'mensaje', 'comment', 'comentario', 'enquiry', 'last messages']),
     source:
-      pick(record, ['source', 'channel', 'chatbot', 'botName', 'origin', 'referer']),
-    country: pick(record, ['country', 'pais', 'país']),
+      pick(record, ['source', 'channel', 'chatbot', 'botName', 'origin', 'referer', 'utm_source', 'utmSource']) ??
+      fieldByLabel(fields, ['utm_medium', 'utm', 'source', 'channel', 'url_lead']),
+    country:
+      pick(record, ['country', 'pais', 'país', 'countryCode']) ??
+      fieldByLabel(fields, ['country', 'pais', 'país']),
+    agent:
+      pick(record, ['agent', 'agentName', 'operator', 'operatorName', 'whatsappOperator']) ??
+      fieldByLabel(fields, ['agent', 'operator', 'whatsapp agent']),
+    widget:
+      pick(record, ['widget', 'widgetName', 'business', 'businessName']) ??
+      fieldByLabel(fields, ['widget', 'business']),
+    landingUrl:
+      pick(record, ['url', 'urlLead', 'url_lead', 'landing', 'referer', 'URL_LEAD']) ??
+      fieldByLabel(fields, ['url_lead', 'url lead', 'landing', 'url_first']),
+    utm:
+      pick(record, ['utm', 'utmMedium', 'utm_medium', 'utmSource', 'utm_source']) ??
+      fieldByLabel(fields, ['utm', 'utm_medium', 'utm_source']),
+    ip:
+      pick(record, ['ip', 'ipAddress', 'ip_address']) ??
+      fieldByLabel(fields, ['ip']),
     createdAt: pick(record, [
       'createdAt',
       'created_at',
@@ -149,6 +184,7 @@ function normaliseLead(
       'date',
       'timestamp',
       'time',
+      'captured',
     ]),
     fields,
     raw: record,
@@ -161,9 +197,14 @@ function normaliseLead(
 function extractArray(payload: unknown): Record<string, unknown>[] {
   if (Array.isArray(payload)) return payload as Record<string, unknown>[]
   if (payload && typeof payload === 'object') {
-    for (const key of ['data', 'leads', 'results', 'items', 'records']) {
-      const value = (payload as Record<string, unknown>)[key]
+    const obj = payload as Record<string, unknown>
+    for (const key of ['data', 'leads', 'results', 'items', 'records', 'Stats', 'stats', 'hydra:member', 'member']) {
+      const value = obj[key]
       if (Array.isArray(value)) return value as Record<string, unknown>[]
+    }
+    if (obj.Stats && typeof obj.Stats === 'object') {
+      const stats = obj.Stats as Record<string, unknown>
+      if (Array.isArray(stats.data)) return stats.data as Record<string, unknown>[]
     }
   }
   return []
