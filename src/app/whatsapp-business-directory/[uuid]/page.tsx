@@ -37,14 +37,27 @@ async function loadWidget(uuid: string): Promise<TochatWidget | null> {
     return widget && typeof widget === 'object' ? widget : null
   } catch (err) {
     // 404 from the provider = unknown/deleted widget → notFound().
-    // Anything else is an upstream hiccup; treat as not found too — a
-    // public page must never half-render from an error state.
-    if (!(err instanceof TochatApiError && err.status === 404)) {
+    // 401/403 is what the provider answers for unknown/abused keys too —
+    // crawlers hit these paths constantly, so they are folded into the
+    // same silent not-found path; only a sampled line is logged so a
+    // real credential problem still leaves a trace without flooding
+    // the log. Anything else logs once per occurrence.
+    if (err instanceof TochatApiError && (err.status === 404 || err.status === 401 || err.status === 403)) {
+      if (Date.now() - lastAccessDeniedLog > 300_000) {
+        lastAccessDeniedLog = Date.now()
+        console.error('[landing] widget lookup not found / denied (sampled):', err.status)
+      }
+    } else if (Date.now() - lastAccessDeniedLog > 300_000) {
+      lastAccessDeniedLog = Date.now()
       console.error('[landing] widget lookup failed:', err instanceof Error ? err.message : err)
     }
     return null
   }
 }
+
+// Sampled-logging watermark shared by loadWidget (module scope — one
+// watermark per server process is enough for noise control).
+let lastAccessDeniedLog = 0
 
 function text(value: unknown, fallback = ''): string {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback
